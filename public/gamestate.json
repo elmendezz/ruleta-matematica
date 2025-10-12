@@ -1,7 +1,50 @@
 {
-  "participants": [],
+  "topic": "Las Multiplicaciónes",
+  "participants": [
+    {
+      "name": "ella",
+      "score": 0,
+      "failures": 0,
+      "isEliminated": false
+    },
+    {
+      "name": "yo",
+      "score": 0,
+      "failures": 0,
+      "isEliminated": false
+    },
+    {
+      "name": "tu",
+      "score": 0,
+      "failures": 0,
+      "isEliminated": false
+    },
+    {
+      "name": "el",
+      "score": 0,
+      "failures": 0,
+      "isEliminated": false
+    }
+  ],
   "gameState": {
-    "status": "waiting",
+    "status": "running",
+    "currentParticipantIndex": 0,
+    "currentQuestion": "Gira la ruleta",
     "lastResult": null
-  }
+  },
+  "rouletteCategories": [
+    "Tablas de Multiplicar",
+    "Multiplicación por 10, 100 y 1000",
+    "Multiplicación de un número por un dígito",
+    "Problemas de Multiplicación",
+    "Números al Cuadrado"
+  ],
+  "colors": [
+    "#4a90e2",
+    "#50e3c2",
+    "#f5a623",
+    "#bd10e0",
+    "#9013fe",
+    "#e74c3c"
+  ]
 }
