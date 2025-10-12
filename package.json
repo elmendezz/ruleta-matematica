@@ -1,7 +1,8 @@
 {
-  "name": "ruleta-matematica-api",
-  "version": "1.0.0",
+  "name": "ruleta-gist-pro",
+  "version": "3.0.0",
   "dependencies": {
-    "@google/generative-ai": "^0.1.0"
+    "@google/generative-ai": "^0.1.0",
+    "axios": "^1.6.2"
   }
 }
