@@ -16,7 +16,7 @@ export default async function handler(request, response) {
 
     // Inicializar el cliente de Google AI
     const genAI = new GoogleGenerativeAI(GCP_API_KEY);
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     try {
         let gameState = request.body;
