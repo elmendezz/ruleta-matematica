@@ -4,7 +4,7 @@
     {
       "name": "ella",
       "score": 0,
-      "failures": 0,
+      "failures": 1,
       "isEliminated": false
     },
     {
@@ -28,11 +28,14 @@
   ],
   "gameState": {
     "status": "running",
-    "currentParticipantIndex": 0,
-    "currentQuestion": "Gira la ruleta",
-    "lastResult": null,
+    "currentParticipantIndex": 1,
+    "currentQuestion": "Turno del siguiente jugador.",
+    "lastResult": {
+      "participantName": "ella",
+      "result": "incorrect"
+    },
     "isSpinning": true,
-    "spinAngle": 1945.0772350387615
+    "spinAngle": 2146.079220802843
   },
   "rouletteCategories": [
     "Tablas de Multiplicar",
