@@ -2,25 +2,13 @@
   "topic": "Las Multiplicaciónes",
   "participants": [
     {
-      "name": "ella",
+      "name": "un bot #2",
       "score": 0,
       "failures": 0,
       "isEliminated": false
     },
     {
-      "name": "yo",
-      "score": 0,
-      "failures": 0,
-      "isEliminated": false
-    },
-    {
-      "name": "tu",
-      "score": 0,
-      "failures": 0,
-      "isEliminated": false
-    },
-    {
-      "name": "el",
+      "name": "elmendezz",
       "score": 0,
       "failures": 0,
       "isEliminated": false
@@ -30,14 +18,16 @@
     "status": "running",
     "currentParticipantIndex": 0,
     "currentQuestion": "Gira la ruleta",
-    "lastResult": null
+    "lastResult": null,
+    "isSpinning": true,
+    "spinAngle": 2108.044671519177
   },
   "rouletteCategories": [
     "Tablas de Multiplicar",
-    "Multiplicación por 10, 100 y 1000",
-    "Multiplicación de un número por un dígito",
-    "Problemas de Multiplicación",
-    "Números al Cuadrado"
+    "Multiplicar por 10, 100, 1000",
+    "Doble y Triple",
+    "Multiplicación de Dos Cifras",
+    "Problemas de Multiplicación"
   ],
   "colors": [
     "#4a90e2",
