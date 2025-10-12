@@ -3,8 +3,8 @@
   "participants": [
     {
       "name": "ella",
-      "score": 0,
-      "failures": 1,
+      "score": 10,
+      "failures": 0,
       "isEliminated": false
     },
     {
@@ -32,7 +32,7 @@
     "currentQuestion": "Turno del siguiente jugador.",
     "lastResult": {
       "participantName": "ella",
-      "result": "incorrect"
+      "result": "correct"
     },
     "isSpinning": true,
     "spinAngle": 2014.7805763420306
