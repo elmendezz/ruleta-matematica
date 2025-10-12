@@ -5,7 +5,7 @@
       "name": "ella",
       "score": 0,
       "failures": 0,
-      "isEliminated": true
+      "isEliminated": false
     },
     {
       "name": "yo",
@@ -28,11 +28,11 @@
   ],
   "gameState": {
     "status": "running",
-    "currentParticipantIndex": 1,
-    "currentQuestion": "Jugador eliminado. Siguiente turno.",
+    "currentParticipantIndex": 0,
+    "currentQuestion": "Gira la ruleta",
     "lastResult": null,
     "isSpinning": true,
-    "spinAngle": 2014.7805763420306
+    "spinAngle": 1945.0772350387615
   },
   "rouletteCategories": [
     "Tablas de Multiplicar",
