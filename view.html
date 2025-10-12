@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estadísticas del Juego</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@400;700;900&display=swap');
+
+        :root {
+            --bg-color: #000011;
+            --glass-bg: rgba(15, 20, 40, 0.65);
+            --border-color: rgba(0, 190, 255, 0.3);
+            --glow-color: #00bfff;
+            --primary-accent: #ff00ff;
+            --text-color: #e0e0ff;
+            --success-color: #00ff7f;
+            --fail-color: #ff4d4d;
+        }
+
+        @keyframes move-twink-back { from {background-position:0 0;} to {background-position:-10000px 5000px;} }
+        .stars, .twinkling { position:fixed; top:0; left:0; right:0; bottom:0; width:100%; height:100%; display:block; z-index: -1; }
+        .stars { background:#000 url(https://www.wearewebstars.com/assets/images/stars.png) repeat top center; }
+        .twinkling { background:transparent url(https://www.wearewebstars.com/assets/images/twinkling.png) repeat top center; animation:move-twink-back 200s linear infinite; }
+
+        body {
+            font-family: 'Exo 2', sans-serif;
+            margin: 0; padding: 20px;
+            background-color: var(--bg-color); color: var(--text-color);
+            display: flex; justify-content: center; align-items: center;
+            min-height: 100vh; text-align: center;
+            overflow: hidden;
+        }
+
+        .container {
+            width: 100%; max-width: 1400px; padding: 25px;
+            background: var(--glass-bg); backdrop-filter: blur(12px);
+            border: 2px solid var(--border-color); border-radius: 20px;
+            box-shadow: 0 0 20px var(--glow-color), inset 0 0 15px rgba(0, 190, 255, 0.2);
+            animation: fadeIn 1s ease-out;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        
+        h1, h2, h3 {
+            font-weight: 900; text-transform: uppercase; letter-spacing: 2px;
+            color: #fff;
+            text-shadow: 0 0 5px #fff, 0 0 10px var(--primary-accent), 0 0 20px var(--primary-accent);
+        }
+
+        .stats-grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 30px; align-items: center; }
+        .player-stats-table { width: 100%; border-collapse: separate; border-spacing: 0 5px; }
+        .player-stats-table th, .player-stats-table td { padding: 15px; background: rgba(0, 30, 60, 0.5); border-bottom: 2px solid var(--border-color); }
+        .player-stats-table th { color: var(--primary-accent); font-size: 1.2em; text-align: left; }
+        .player-stats-table td { font-size: 1.1em; text-align: left; }
+        .player-stats-table tr:first-child th:first-child { border-top-left-radius: 10px; }
+        .player-stats-table tr:first-child th:last-child { border-top-right-radius: 10px; }
+        .player-stats-table tr:hover td { background: var(--glass-bg); border-color: var(--glow-color); }
+        .player-stats-table tr.eliminated { background: rgba(80, 0, 0, 0.7); text-decoration: line-through; opacity: 0.6; }
+
+        #last-result-display { padding: 15px; border-radius: 8px; margin-top: 20px; font-size: 1.5em; font-weight: bold; opacity: 0; transform: scale(0.8); transition: all 0.5s ease; }
+        #last-result-display.visible { opacity: 1; transform: scale(1); }
+        #last-result-display.correct { background: var(--success-color); color: #000; box-shadow: 0 0 20px var(--success-color); }
+        #last-result-display.incorrect { background: var(--fail-color); color: #fff; box-shadow: 0 0 20px var(--fail-color); }
+        #arrow { border-left: 20px solid transparent; border-right: 20px solid transparent; border-top: 40px solid var(--primary-accent); z-index: 10; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -100%); filter: drop-shadow(0 -3px 5px var(--primary-accent));}
+    </style>
+</head>
+<body>
+    <div class="stars"></div>
+    <div class="twinkling"></div>
+
+    <div class="container">
+        <div id="game-view" style="display: none;">
+            <h1>Estadísticas en Vivo 📊</h1>
+            <div class="stats-grid">
+                <section id="stats-section">
+                    <h2>Tabla de Jugadores</h2>
+                    <table class="player-stats-table">
+                        <thead>
+                            <tr><th>Jugador</th><th>Puntos</th><th>Fallos</th><th>Estado</th></tr>
+                        </thead>
+                        <tbody id="stats-tbody"></tbody>
+                    </table>
+                </section>
+                <section class="live-action">
+                    <h3>Turno Actual</h3>
+                    <div id="roulette-container" style="position: relative; max-width: 300px; margin: auto;">
+                        <div id="arrow"></div>
+                        <canvas id="roulette-wheel"></canvas>
+                    </div>
+                    <div id="last-result-display"></div>
+                </section>
+            </div>
+        </div>
+        <div id="waiting-message"><h1>Esperando que inicie el juego...</h1></div>
+    </div>
+    <script>
+        const gameView = document.getElementById('game-view');
+        const waitingMessage = document.getElementById('waiting-message');
+        const statsTbody = document.getElementById('stats-tbody');
+        const lastResultDisplay = document.getElementById('last-result-display');
+        const canvas = document.getElementById('roulette-wheel');
+        const ctx = canvas.getContext('2d');
+        
+        let rouletteChart = null;
+        let lastKnownState = {};
+        let resultTimeout;
+
+        async function fetchAndUpdate() {
+            const response = await fetch('/gamestate.json?cache-bust=' + new Date().getTime());
+            const data = await response.json();
+
+            if (JSON.stringify(data) === JSON.stringify(lastKnownState)) return;
+            const oldState = lastKnownState;
+            lastKnownState = data;
+
+            const { participants, gameState } = data;
+
+            if (gameState.status !== 'running' && gameState.status !== 'finished') {
+                gameView.style.display = 'none';
+                waitingMessage.style.display = 'block';
+                return;
+            }
+            if (gameState.status === 'finished') {
+                waitingMessage.innerHTML = '<h1>¡Juego Terminado!</h1>';
+                gameView.style.display = 'none';
+                waitingMessage.style.display = 'block';
+                return;
+            }
+
+            gameView.style.display = 'block';
+            waitingMessage.style.display = 'none';
+
+            updatePlayerStats(participants, gameState.currentParticipantIndex);
+
+            if (gameState.lastResult) {
+                if(JSON.stringify(gameState.lastResult) !== JSON.stringify(oldState?.gameState?.lastResult)) {
+                    lastResultDisplay.textContent = `${gameState.lastResult.participantName} respondió ${gameState.lastResult.result === 'correct' ? '¡CORRECTAMENTE!' : 'incorrectamente'}.`;
+                    lastResultDisplay.className = `visible ${gameState.lastResult.result}`;
+                    clearTimeout(resultTimeout);
+                    resultTimeout = setTimeout(() => {
+                        lastResultDisplay.classList.remove('visible');
+                    }, 4000);
+                }
+            }
+
+            if (!rouletteChart || JSON.stringify(rouletteChart.data.labels) !== JSON.stringify(gameState.rouletteCategories)) {
+                rouletteChart = createRoulette(gameState.rouletteCategories, gameState.colors);
+            }
+        }
+
+        function updatePlayerStats(participants, currentIndex) {
+            statsTbody.innerHTML = '';
+            participants.forEach((p, index) => {
+                const row = document.createElement('tr');
+                if(p.isEliminated) row.classList.add('eliminated');
+                
+                row.innerHTML = `
+                    <td>${p.name} ${index === currentIndex && !p.isEliminated ? '☄️' : ''}</td>
+                    <td>${p.score}</td>
+                    <td>${'🔴'.repeat(p.failures)}${'⚪️'.repeat(3 - p.failures)}</td>
+                    <td>${p.isEliminated ? 'Eliminado' : 'Activo'}</td>
+                `;
+                statsTbody.appendChild(row);
+            });
+        }
+        
+        function createRoulette(categories, colors) {
+            if (rouletteChart) rouletteChart.destroy();
+            return new Chart(ctx, { type: 'doughnut', data: { labels: categories, datasets: [{ data: categories.map(() => 1), backgroundColor: colors, borderColor: 'rgba(0,0,20,0.8)', borderWidth: 4 }] }, options: { responsive: true, animation: { animateRotate: false }, plugins: { legend: { display: false }, tooltip: { enabled: false } } } });
+        }
+        
+        setInterval(fetchAndUpdate, 2000);
+        fetchAndUpdate();
+    </script>
+</body>
+</html>
