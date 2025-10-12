@@ -1,7 +1,38 @@
 {
+  "topic": "Las Multiplicaciónes",
+  "participants": [
+    {
+      "name": "un bot #2",
+      "score": 0,
+      "failures": 0,
+      "isEliminated": false
+    },
+    {
+      "name": "elmendezz",
+      "score": 0,
+      "failures": 0,
+      "isEliminated": false
+    }
+  ],
   "gameState": {
-    "status": "waiting",
+    "status": "running",
+    "currentParticipantIndex": 0,
+    "currentQuestion": "Gira la ruleta",
     "lastResult": null
   },
-  "participants": []
+  "rouletteCategories": [
+    "Tablas de Multiplicar",
+    "Multiplicar por 10, 100, 1000",
+    "Doble y Triple",
+    "Multiplicación de Dos Cifras",
+    "Problemas de Multiplicación"
+  ],
+  "colors": [
+    "#4a90e2",
+    "#50e3c2",
+    "#f5a623",
+    "#bd10e0",
+    "#9013fe",
+    "#e74c3c"
+  ]
 }
