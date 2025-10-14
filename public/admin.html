@@ -380,6 +380,22 @@
         function spinTheWheel(gameState) {
             canvas.style.transition = 'transform 5s cubic-bezier(0.25, 0.1, 0.25, 1)';
             canvas.style.transform = `rotate(${gameState.spinAngle}deg)`;
+
+            // El admin es el único que calcula el resultado y pide la pregunta
+            canvas.addEventListener('transitionend', () => {
+                const finalRotation = gameState.spinAngle % 360;
+                const sliceAngle = 360 / gameState.rouletteCategories.length;
+                const selectedIndex = Math.floor((360 - finalRotation + 90) % 360 / sliceAngle);
+                const category = gameState.rouletteCategories[selectedIndex];
+                
+                const newState = { 
+                    ...localState,
+                    action: 'generateQuestion',
+                    category: category,
+                };
+                newState.gameState.isSpinning = false; // Asegura que los botones se reactiven
+                updateGameState(newState);
+            }, { once: true });
         }
 
         setInterval(fetchGameState, 1700); // Actualizar cada 1.7 segundos

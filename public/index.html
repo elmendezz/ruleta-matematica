@@ -230,27 +230,6 @@
         function spinTheWheel(gameState) {
             canvas.style.transition = 'transform 5s cubic-bezier(0.25, 0.1, 0.25, 1)';
             canvas.style.transform = `rotate(${gameState.spinAngle}deg)`;
-
-            canvas.addEventListener('transitionend', () => {
-                const finalRotation = gameState.spinAngle % 360;
-                const sliceAngle = 360 / gameState.rouletteCategories.length;
-                const selectedIndex = Math.floor((360 - finalRotation + 90) % 360 / sliceAngle);
-                const category = gameState.rouletteCategories[selectedIndex];
-                
-                const newState = { 
-                    ...lastKnownState,
-                    action: 'generateQuestion',
-                    category: category,
-                };
-                newState.gameState.isSpinning = false;
-
-                 fetch('/api/updateState', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(newState),
-                });
-
-            }, { once: true });
         }
 
         function updateParticipantsList(participants, currentIndex) {
