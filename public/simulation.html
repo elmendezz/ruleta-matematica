@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulación Cósmica</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@400;700;900&display=swap');
+
+        :root {
+            --bg-color: #000011;
+            --primary-accent: #ff00ff;
+            --text-color: #e0e0ff;
+        }
+
+        @keyframes move-twink-back { from {background-position:0 0;} to {background-position:-10000px 5000px;} }
+        .stars, .twinkling { position:fixed; top:0; left:0; right:0; bottom:0; width:100%; height:100%; display:block; z-index: -1; }
+        .stars { background:#000 url(https://www.wearewebstars.com/assets/images/stars.png) repeat top center; }
+        .twinkling { background:transparent url(https://www.wearewebstars.com/assets/images/twinkling.png) repeat top center; animation:move-twink-back 200s linear infinite; }
+
+        body {
+            font-family: 'Exo 2', sans-serif;
+            margin: 0; padding: 20px;
+            background-color: var(--bg-color); color: var(--text-color);
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            min-height: 100vh; text-align: center;
+            overflow: hidden;
+        }
+        
+        h1 {
+            font-weight: 900; text-transform: uppercase; letter-spacing: 2px;
+            color: #fff;
+            text-shadow: 0 0 5px #fff, 0 0 10px var(--primary-accent), 0 0 20px var(--primary-accent);
+            font-size: 4em;
+        }
+
+        p {
+            font-size: 1.5em;
+        }
+    </style>
+</head>
+<body>
+    <div class="stars"></div>
+    <div class="twinkling"></div>
+
+    <h1>Simulación Activada</h1>
+    <p>Aquí puedes construir tu simulación cósmica.</p>
+
+</body>
+</html>
