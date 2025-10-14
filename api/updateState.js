@@ -11,16 +11,52 @@ export default async function handler(request, response) {
     // Obtener las claves secretas y configuración desde las Variables de Entorno de Vercel
     const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
     const GCP_API_KEY = process.env.GCP_API_KEY;
-    const REPO = process.env.GITHUB_REPO; // ej: 'tu-usuario/nombre-del-repo'
-    const FILE_PATH = 'public/gamestate.json';
-
+    let GIST_ID = process.env.GIST_ID; // El ID del Gist que contiene el estado
+    const GIST_FILENAME = 'gamestate.json';
+    
     // Inicializar el cliente de Google AI
     const genAI = new GoogleGenerativeAI(GCP_API_KEY);
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     try {
+        // Si no hay GIST_ID, crea uno y lo muestra en los logs.
+        if (!GIST_ID) {
+            console.log('GIST_ID not set. Creating a new Gist...');
+            const initialContent = JSON.stringify({
+                participants: [],
+                gameState: { status: 'waiting' }
+            }, null, 2);
+
+            const createGistResponse = await fetch('https://api.github.com/gists', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `token ${GITHUB_TOKEN}`,
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/vnd.github.v3+json'
+                },
+                body: JSON.stringify({
+                    description: "Ruleta Matemática Game State",
+                    public: false,
+                    files: { [GIST_FILENAME]: { content: initialContent } }
+                })
+            });
+
+            if (!createGistResponse.ok) throw new Error('Failed to create Gist.');
+            
+            const newGist = await createGistResponse.json();
+            GIST_ID = newGist.id;
+            console.log('--------------------------------------------------------------------');
+            console.log(`🚀 New Gist created! Add this to your Vercel environment variables:\n   GIST_ID=${GIST_ID}`);
+            console.log('--------------------------------------------------------------------');
+        }
+
         let gameState = request.body;
         const action = gameState.action; // La acción que envía el admin.html
+
+        // Si la acción es finalizar o reiniciar, no necesitamos a la IA
+        if (action === 'endGame' || action === 'reset') {
+            // Simplemente se procederá a guardar el estado modificado
+        }
 
         // --- LÓGICA DE IA ---
         if (action === 'startGame') {
@@ -43,29 +79,22 @@ export default async function handler(request, response) {
 
         delete gameState.action; // Limpiar la acción antes de guardar
         delete gameState.category; // Limpiar la categoría antes de guardar
-
-        // --- LÓGICA DE GITHUB ---
-        const githubApiUrl = `https://api.github.com/repos/${REPO}/contents/${FILE_PATH}`;
-
-        // 1. Obtener el SHA actual del archivo (necesario para actualizar)
-        const currentFile = await fetch(githubApiUrl, {
-            headers: { 'Authorization': `token ${GITHUB_TOKEN}` }
-        }).then(res => res.json());
-
-        // 2. Preparar el contenido para la API de GitHub
-        const content = Buffer.from(JSON.stringify(gameState, null, 2)).toString('base64');
-
-        // 3. Enviar la actualización a GitHub
-        const commitResponse = await fetch(githubApiUrl, {
-            method: 'PUT',
+        
+        // --- LÓGICA DE GITHUB GIST ---
+        const gistApiUrl = `https://api.github.com/gists/${GIST_ID}`;
+        const content = JSON.stringify(gameState, null, 2);
+        
+        // Enviar la actualización al Gist
+        const commitResponse = await fetch(gistApiUrl, {
+            method: 'PATCH',
             headers: {
                 'Authorization': `token ${GITHUB_TOKEN}`,
                 'Content-Type': 'application/json',
+                'Accept': 'application/vnd.github.v3+json'
             },
             body: JSON.stringify({
-                message: `[BOT] Update game state: ${new Date().toISOString()}`,
-                content: content,
-                sha: currentFile.sha, // Muy importante incluir el SHA
+                description: `Ruleta Game State - Last update: ${new Date().toISOString()}`,
+                files: { [GIST_FILENAME]: { content: content } }
             }),
         });
 

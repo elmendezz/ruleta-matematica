@@ -115,13 +115,17 @@
         <div class="control-group" id="setup-section">
             <h2>Configuración</h2>
             <input type="text" id="topic-input" placeholder="Tema para la IA (Ej: El Sistema Solar)" style="width: calc(100% - 28px); margin-bottom: 10px;">
+            <div style="margin-bottom: 10px;">
+                <label for="failures-input" style="display: block; margin-bottom: 5px;">Oportunidades por jugador:</label>
+                <input type="number" id="failures-input" value="3" min="1" style="width: calc(100% - 28px);">
+            </div>
             <div style="display: flex; margin: 10px 0;">
                 <input type="text" id="participant-name" placeholder="Nombre del Alumno" style="flex-grow: 1;">
                 <button id="add-participant-btn" style="margin:0 0 0 10px; width: auto;">Añadir</button>
             </div>
             <ul id="teacher-participants-list"></ul>
             <button id="start-game-btn">🚀 Iniciar Juego</button>
-            <button id="reset-game-btn" class="incorrect">Reiniciar Juego</button>
+            <button id="reset-game-btn" class="eliminate">Reiniciar Juego</button>
         </div>
 
         <div class="control-group" id="game-control-section" style="display: none;">
@@ -131,7 +135,8 @@
                 <button class="correct" id="correct-btn">✅ Correcto</button>
                 <button class="incorrect" id="incorrect-btn">❌ Incorrecto</button>
             </div>
-            <button class="eliminate" id="eliminate-btn">Eliminar Jugador</button>
+            <button class="eliminate" id="eliminate-btn">Descalificar Jugador</button>
+            <button id="end-game-btn" class="incorrect" style="margin-top: 20px;">Finalizar Partida</button>
         </div>
     </div>
 
@@ -146,11 +151,13 @@
         const incorrectBtn = document.getElementById('incorrect-btn');
         const eliminateBtn = document.getElementById('eliminate-btn');
         const resetBtn = document.getElementById('reset-game-btn');
+        const endGameBtn = document.getElementById('end-game-btn');
         const playerDisplay = document.getElementById('current-player-teacher');
         const setupSection = document.getElementById('setup-section');
         const gameSection = document.getElementById('game-control-section');
         const loadingDiv = document.getElementById('loading');
-
+        const failuresInput = document.getElementById('failures-input');
+        
         let localState = { participants: [], gameState: { status: 'waiting' } };
 
         async function updateGameState(state) {
@@ -192,12 +199,16 @@
                 const j = Math.floor(Math.random() * (i + 1));
                 [localState.participants[i], localState.participants[j]] = [localState.participants[j], localState.participants[i]];
             }
+            const maxFailures = parseInt(failuresInput.value, 10) || 3;
+
             const newState = {
                 action: 'startGame',
                 topic: topicInput.value.trim(),
                 participants: localState.participants,
                 gameState: {
-                    status: 'running', currentParticipantIndex: 0,
+                    status: 'running', 
+                    maxFailures: maxFailures,
+                    currentParticipantIndex: 0,
                     currentQuestion: 'Gira la ruleta', lastResult: null
                 }
             };
@@ -233,7 +244,7 @@
             } else {
                 currentPlayer.failures += 1;
                 newState.gameState.lastResult = { participantName: currentPlayer.name, result: 'incorrect' };
-                if (currentPlayer.failures >= 3) {
+                if (currentPlayer.failures >= newState.gameState.maxFailures) {
                     currentPlayer.isEliminated = true;
                 }
             }
@@ -269,8 +280,16 @@
         correctBtn.addEventListener('click', () => handleAnswer(true));
         incorrectBtn.addEventListener('click', () => handleAnswer(false));
         resetBtn.addEventListener('click', () => {
+            if (confirm('¿Seguro que quieres reiniciar todo el juego? Se perderán los participantes y la configuración.')) {
+                updateGameState({ action: 'reset', participants: [], gameState: { status: 'waiting', lastResult: null } });
+            }
+        });
+
+        endGameBtn.addEventListener('click', () => {
             if (confirm('¿Seguro?')) {
-                updateGameState({ participants: [], gameState: { status: 'waiting', lastResult: null } });
+                const newState = { ...localState, action: 'endGame' };
+                newState.gameState.status = 'finished';
+                updateGameState(newState);
             }
         });
 
@@ -287,12 +306,16 @@
                 gameSection.style.display = 'block';
                 const currentPlayer = localState.participants[localState.gameState.currentParticipantIndex];
                 playerDisplay.textContent = `Turno de: ${currentPlayer.name}`;
+                spinBtn.disabled = localState.gameState.isSpinning;
+                correctBtn.disabled = localState.gameState.isSpinning;
+                incorrectBtn.disabled = localState.gameState.isSpinning;
             } else {
                 setupSection.style.display = 'block';
                 gameSection.style.display = 'none';
             }
         }
-        fetchGameState();
+        setInterval(fetchGameState, 1000); // Actualizar cada segundo
+        fetchGameState(); // Carga inicial
     </script>
 </body>
 </html>

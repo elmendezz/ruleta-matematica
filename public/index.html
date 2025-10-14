@@ -109,6 +109,29 @@
         let rouletteChart = null;
         let lastKnownState = {};
 
+        // --- Lógica para la simulación secreta ---
+        let keyHoldTimer = null;
+        const KEY_TO_PRESS = 'c';
+        const HOLD_DURATION = 3000; // 3 segundos
+
+        document.addEventListener('keydown', (event) => {
+            // Inicia el temporizador si se presiona la tecla 'c' y no hay un temporizador activo
+            if (event.key.toLowerCase() === KEY_TO_PRESS && keyHoldTimer === null) {
+                keyHoldTimer = setTimeout(() => {
+                    console.log('Tecla ' + KEY_TO_PRESS + ' mantenida por 3 segundos. Abriendo simulación...');
+                    window.location.href = '/simulation.html'; // Redirige a la página de simulación
+                }, HOLD_DURATION);
+            }
+        });
+
+        document.addEventListener('keyup', (event) => {
+            // Si se suelta la tecla 'c', se cancela el temporizador
+            if (event.key.toLowerCase() === KEY_TO_PRESS) {
+                clearTimeout(keyHoldTimer);
+                keyHoldTimer = null;
+            }
+        });
+
         async function fetchAndUpdate() {
             const response = await fetch('/gamestate.json?cache-bust=' + new Date().getTime());
             const data = await response.json();
@@ -204,7 +227,7 @@
             });
         }
 
-        setInterval(fetchAndUpdate, 2000);
+        setInterval(fetchAndUpdate, 1000);
         fetchAndUpdate();
     </script>
 </body>
