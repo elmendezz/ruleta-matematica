@@ -54,7 +54,7 @@ export default async function handler(request, response) {
         const action = gameState.action; // La acción que envía el admin.html
 
         // Si la acción es finalizar o reiniciar, no necesitamos a la IA
-        if (action === 'endGame' || action === 'reset') {
+        if (action === 'endGame' || action === 'reset' || action === 'updateParticipants') {
             // Simplemente se procederá a guardar el estado modificado
         }
 
@@ -74,10 +74,22 @@ export default async function handler(request, response) {
         }
 
         if (action === 'generateQuestion') {
-            const category = gameState.category;
-            const prompt = `Genera una pregunta de cálculo mental muy corta y simple para un niño de primaria sobre la categoría: "${category}". Responde únicamente con la pregunta en formato de string.`;
-            const result = await model.generateContent(prompt);
-            gameState.currentQuestion = result.response.text().trim();
+            const selectedQuestion = gameState.category; // 'category' ahora contiene la pregunta seleccionada
+
+            // Si hay entradas manuales, busca la respuesta correspondiente
+            if (gameState.manualEntries && gameState.manualEntries.length > 0) {
+                const entry = gameState.manualEntries.find(e => e.question === selectedQuestion);
+                if (entry) {
+                    gameState.currentQuestion = `${entry.question}\n(Respuesta: ${entry.answer})`;
+                } else {
+                    gameState.currentQuestion = selectedQuestion; // Si no encuentra respuesta, muestra solo la pregunta
+                }
+            } else {
+                // Si no hay entradas manuales, usa la IA como antes
+                const prompt = `Genera una pregunta de cálculo mental muy corta y simple para un niño de primaria sobre la categoría: "${selectedQuestion}". Responde únicamente con la pregunta en formato de string.`;
+                const result = await model.generateContent(prompt);
+                gameState.currentQuestion = result.response.text().trim();
+            }
         }
 
         delete gameState.action; // Limpiar la acción antes de guardar

@@ -124,9 +124,9 @@
                 </label>
             </div>
             <div id="manual-categories-container" style="display: none; margin-bottom: 10px;">
-                <textarea id="manual-categories-input" rows="5" placeholder="Introduce las categorías, una por línea.&#10;Ej: Sumas&#10;Restas&#10;Multiplicaciones"></textarea>
+                <textarea id="manual-entries-input" rows="5" placeholder="Introduce tus preguntas y respuestas, una por línea.&#10;Formato: Pregunta - Respuesta&#10;Ej: ¿Cuánto es 5x5? - 25&#10;¿Capital de Francia? - París"></textarea>
                 <style>
-                    #manual-categories-input { width: calc(100% - 28px); background-color: rgba(0,0,20,0.5); color: var(--text-color); border: 2px solid var(--border-color); border-radius: 8px; padding: 12px; font-family: inherit; }
+                    #manual-entries-input { width: calc(100% - 28px); background-color: rgba(0,0,20,0.5); color: var(--text-color); border: 2px solid var(--border-color); border-radius: 8px; padding: 12px; font-family: inherit; }
                 </style>
             </div>
             <div style="margin-bottom: 10px;">
@@ -175,7 +175,7 @@
         const gameSection = document.getElementById('game-control-section');
         const loadingDiv = document.getElementById('loading');
         const manualCategoriesContainer = document.getElementById('manual-categories-container');
-        const manualCategoriesInput = document.getElementById('manual-categories-input');
+        const manualEntriesInput = document.getElementById('manual-entries-input');
         const failuresInput = document.getElementById('failures-input');
         const canvas = document.getElementById('roulette-wheel');
         const ctx = canvas.getContext('2d');
@@ -202,9 +202,9 @@
             try {
                 const response = await fetch('/api/getGameState');
                 const data = await response.json();
+                // Solo renderizar si hay cambios reales en el estado
                 if (JSON.stringify(data) === JSON.stringify(localState)) return;
-                
-                oldState = localState;
+
                 localState = data;
                 renderUI();
             } catch (error) { console.error("Error al cargar estado.", error); }
@@ -214,24 +214,30 @@
             const name = participantInput.value.trim();
             if (name) {
                 localState.participants.push({ name, score: 0, failures: 0, isEliminated: false });
+                // Envía el estado actualizado al servidor para guardar el nuevo participante
+                renderUI(); // Actualiza la UI inmediatamente
+                updateGameState({ ...localState, action: 'updateParticipants' });
                 participantInput.value = '';
-                renderUI();
             }
         });
 
         startBtn.addEventListener('click', () => {
             const categorySource = document.querySelector('input[name="category-source"]:checked').value;
             const topic = topicInput.value.trim();
-            const manualCategories = manualCategoriesInput.value.trim().split('\n').filter(c => c.trim() !== '');
+            const manualEntriesRaw = manualEntriesInput.value.trim().split('\n').filter(line => line.includes('-'));
+            const manualEntries = manualEntriesRaw.map(line => {
+                const parts = line.split('-');
+                return { question: parts[0].trim(), answer: parts.slice(1).join('-').trim() };
+            });
 
             if (localState.participants.length < 1) {
                 return alert('Añade al menos un participante.');
             }
             if (categorySource === 'ai' && !topic) {
-                return alert('Introduce un tema para que la IA genere las categorías.');
+                return alert('Introduce un tema para que la IA genere las entradas.');
             }
-            if (categorySource === 'manual' && manualCategories.length < 2) {
-                return alert('Introduce al menos 2 categorías manualmente, una por línea.');
+            if (categorySource === 'manual' && manualEntries.length < 2) {
+                return alert('Introduce al menos 2 entradas válidas (Pregunta - Respuesta).');
             }
 
             for (let i = localState.participants.length - 1; i > 0; i--) {
@@ -240,12 +246,13 @@
             }
             const maxFailures = parseInt(failuresInput.value, 10) || 3;
 
-            const rouletteCategories = categorySource === 'manual' ? manualCategories : null;
+            const rouletteCategories = categorySource === 'manual' ? manualEntries.map(e => e.question) : null;
 
             const newState = {
                 action: 'startGame',
                 topic: topic,
                 participants: localState.participants,
+                manualEntries: categorySource === 'manual' ? manualEntries : null,
                 rouletteCategories: rouletteCategories, // Envía las categorías manuales si existen
                 gameState: {
                     status: 'running', 
@@ -364,7 +371,7 @@
                 if (localState.gameState.rouletteCategories && (!rouletteChart || JSON.stringify(rouletteChart.data.labels) !== JSON.stringify(localState.gameState.rouletteCategories))) {
                     rouletteChart = createRoulette(localState.gameState.rouletteCategories, localState.gameState.colors);
                 }
-                if (localState.gameState.isSpinning && !oldState?.gameState?.isSpinning) {
+                if (localState.gameState.isSpinning && oldState?.gameState?.isSpinning === false) {
                     spinTheWheel(localState.gameState);
                 }
 
@@ -372,6 +379,8 @@
                 setupSection.style.display = 'block';
                 gameSection.style.display = 'none';
             }
+            // Guardar el estado actual para la próxima comparación de giro
+            oldState = JSON.parse(JSON.stringify(localState));
         }
 
         function createRoulette(categories, colors) {
@@ -380,7 +389,7 @@
         }
 
         function spinTheWheel(gameState) {
-            canvas.style.transition = 'transform 5s cubic-bezier(0.25, 0.1, 0.25, 1)';
+            canvas.style.transition = 'transform 6.2s cubic-bezier(0.25, 0.1, 0.25, 1)';
             canvas.style.transform = `rotate(${gameState.spinAngle}deg)`;
 
             // El admin es el único que calcula el resultado y pide la pregunta
@@ -389,7 +398,7 @@
                 const sliceAngle = 360 / gameState.rouletteCategories.length;
                 const selectedIndex = Math.floor((360 - finalRotation + 90) % 360 / sliceAngle);
                 const category = gameState.rouletteCategories[selectedIndex];
-                
+
                 const newState = { 
                     ...localState,
                     action: 'generateQuestion',
