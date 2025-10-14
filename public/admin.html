@@ -117,7 +117,10 @@
         
         <div class="control-group" id="setup-section">
             <h2>Configuración</h2>
-            <input type="text" id="topic-input" placeholder="Tema para la IA (Ej: El Sistema Solar)" style="width: calc(100% - 28px); margin-bottom: 10px;">
+            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                <input type="text" id="topic-input" placeholder="Tema para la IA (Ej: El Sistema Solar)" style="flex-grow: 1; margin: 0;">
+                <button id="fetch-categories-btn" style="width: auto; margin: 0;">Obtener Categorías</button>
+            </div>
             <div style="margin-bottom: 10px; text-align: left;">
                 <label>
                     <input type="radio" name="category-source" value="ai" checked> Generar categorías con IA
@@ -127,7 +130,7 @@
                 </label>
             </div>
             <div id="manual-categories-container" style="display: none; margin-bottom: 10px;">
-                <textarea id="manual-entries-input" rows="5" placeholder="Introduce tus preguntas y respuestas, una por línea.&#10;Formato: Pregunta - Respuesta&#10;Ej: ¿Cuánto es 5x5? - 25&#10;¿Capital de Francia? - París"></textarea>
+                <textarea id="manual-entries-input" rows="5" placeholder="Introduce las categorías, una por línea.&#10;Ej: Geografía&#10;Historia de México&#10;Matemáticas"></textarea>
                 <style>
                     #manual-entries-input { width: calc(100% - 28px); background-color: rgba(0,0,20,0.5); color: var(--text-color); border: 2px solid var(--border-color); border-radius: 8px; padding: 12px; font-family: inherit; }
                 </style>
@@ -180,6 +183,7 @@
         const manualCategoriesContainer = document.getElementById('manual-categories-container');
         const manualEntriesInput = document.getElementById('manual-entries-input');
         const failuresInput = document.getElementById('failures-input');
+        const fetchCategoriesBtn = document.getElementById('fetch-categories-btn');
         const canvas = document.getElementById('roulette-wheel');
         const ctx = canvas.getContext('2d');
 
@@ -226,29 +230,56 @@
             if (name) {
                 localState.participants.push({ name, score: 0, failures: 0, isEliminated: false });
                 // Envía el estado actualizado al servidor para guardar el nuevo participante
-                renderUI(); // Actualiza la UI inmediatamente
                 updateGameState({ ...localState, action: 'updateParticipants' });
                 participantInput.value = '';
             }
         });
 
+        list.addEventListener('click', (e) => {
+            if (e.target.classList.contains('remove-participant-btn')) {
+                const indexToRemove = parseInt(e.target.dataset.index, 10);
+                localState.participants.splice(indexToRemove, 1);
+                updateGameState({ ...localState, action: 'updateParticipants' });
+            }
+        });
+
+        fetchCategoriesBtn.addEventListener('click', async () => {
+            const topic = topicInput.value.trim();
+            if (!topic) return alert('Por favor, introduce un tema para la IA.');
+
+            loadingDiv.style.display = 'block';
+            try {
+                const response = await fetch('/api/updateState', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'fetchCategories', topic: topic }),
+                });
+                const data = await response.json();
+                manualEntriesInput.value = data.categories.join('\n');
+                document.querySelector('input[name="category-source"][value="manual"]').click();
+            } catch (error) { console.error(error); alert('Error al obtener categorías.'); }
+            finally { loadingDiv.style.display = 'none'; }
+        });
+
         startBtn.addEventListener('click', () => {
             const categorySource = document.querySelector('input[name="category-source"]:checked').value;
             const topic = topicInput.value.trim();
-            const manualEntriesRaw = manualEntriesInput.value.trim().split('\n').filter(line => line.includes('-'));
-            const manualEntries = manualEntriesRaw.map(line => {
-                const parts = line.split('-');
-                return { question: parts[0].trim(), answer: parts.slice(1).join('-').trim() };
-            });
+            const manualCategories = manualEntriesInput.value.trim().split('\n').filter(line => line.trim() !== '');
 
             if (localState.participants.length < 1) {
                 return alert('Añade al menos un participante.');
             }
-            if (categorySource === 'ai' && !topic) {
-                return alert('Introduce un tema para que la IA genere las entradas.');
-            }
-            if (categorySource === 'manual' && manualEntries.length < 2) {
-                return alert('Introduce al menos 2 entradas válidas (Pregunta - Respuesta).');
+
+            let rouletteCategories;
+            if (categorySource === 'manual') {
+                if (manualCategories.length < 2) {
+                    return alert('Introduce al menos 2 categorías manualmente.');
+                }
+                rouletteCategories = manualCategories;
+            } else { // 'ai'
+                if (!topic) {
+                    return alert('Introduce un tema para que la IA genere las categorías.');
+                }
             }
 
             for (let i = localState.participants.length - 1; i > 0; i--) {
@@ -257,14 +288,12 @@
             }
             const maxFailures = parseInt(failuresInput.value, 10) || 3;
 
-            const rouletteCategories = categorySource === 'manual' ? manualEntries.map(e => e.question) : null;
-
             const newState = {
                 action: 'startGame',
                 topic: topic,
                 participants: localState.participants,
-                manualEntries: categorySource === 'manual' ? manualEntries : null,
-                rouletteCategories: rouletteCategories, // Envía las categorías manuales si existen
+                manualEntries: null, // Ya no se usa para enviar preguntas/respuestas predefinidas
+                rouletteCategories: rouletteCategories, // Envía las categorías manuales o null si la IA las genera
                 gameState: {
                     status: 'running', 
                     maxFailures: maxFailures,
@@ -361,9 +390,11 @@
 
         function renderUI() {
             list.innerHTML = '';
-            localState.participants.forEach(p => {
+            localState.participants.forEach((p, index) => {
                 const li = document.createElement('li');
-                li.textContent = p.name;
+                li.style.display = 'flex';
+                li.style.justifyContent = 'space-between';
+                li.innerHTML = `<span>${p.name}</span><button class="remove-participant-btn" data-index="${index}" style="width: auto; padding: 2px 8px; margin: 0; border-color: var(--fail-color); color: var(--fail-color); font-size: 0.8em;">❌</button>`;
                 list.appendChild(li);
             });
 

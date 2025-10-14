@@ -58,6 +58,20 @@ export default async function handler(request, response) {
             // Simplemente se procederá a guardar el estado modificado
         }
 
+        // --- LÓGICA PARA OBTENER CATEGORÍAS CON IA ---
+        if (action === 'fetchCategories') {
+            const topic = gameState.topic;
+            if (!topic) {
+                return response.status(400).json({ success: false, message: 'Topic is required.' });
+            }
+            const prompt = `Genera un array JSON con 5 categorías de cálculo mental para una ruleta sobre el tema: "${topic}". El formato debe ser un array de strings, por ejemplo: ["Sumas", "Restas", "Multiplicación"].`;
+            const result = await model.generateContent(prompt);
+            const text = result.response.text();
+            const categories = JSON.parse(text.match(/\[.*?\]/s)[0]);
+            // Devuelve las categorías sin guardar el estado
+            return response.status(200).json({ success: true, categories: categories });
+        }
+
         // --- LÓGICA DE IA ---
         if (action === 'startGame') {
             // Si las categorías no vienen definidas manualmente, se generan con la IA.
