@@ -1,6 +1,7 @@
 export default async function handler(request, response) {
     const GIST_ID = process.env.GIST_ID;
     const GIST_FILENAME = 'gamestate.json';
+    const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 
     if (!GIST_ID) {
         // Si no hay Gist, devuelve un estado inicial para que la UI no falle.
@@ -12,7 +13,12 @@ export default async function handler(request, response) {
 
     try {
         const gistUrl = `https://api.github.com/gists/${GIST_ID}`;
-        const gistResponse = await fetch(gistUrl);
+        const gistResponse = await fetch(gistUrl, {
+            headers: {
+                'Authorization': `token ${GITHUB_TOKEN}`,
+                'Accept': 'application/vnd.github.v3+json'
+            }
+        });
 
         if (!gistResponse.ok) {
             throw new Error(`Failed to fetch Gist: ${gistResponse.statusText}`);

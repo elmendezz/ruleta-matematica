@@ -239,7 +239,7 @@
             return new Chart(ctx, { type: 'doughnut', data: { labels: categories, datasets: [{ data: categories.map(() => 1), backgroundColor: colors, borderColor: 'rgba(0,0,20,0.8)', borderWidth: 4 }] }, options: { responsive: true, animation: { animateRotate: false }, plugins: { legend: { display: false }, tooltip: { enabled: false } } } });
         }
         
-        setInterval(fetchAndUpdate, 1000);
+        setInterval(fetchAndUpdate, 1700);
         fetchAndUpdate();
     </script>
 </body>
