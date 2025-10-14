@@ -67,7 +67,33 @@
         #topic-title { font-size: 3em; }
         #current-participant-display { font-size: 2.5em; margin-top: 15px; color: var(--glow-color); }
         #question-display { font-size: 5em; font-weight: bold; color: #fff; min-height: 150px; text-shadow: 0 0 10px var(--glow-color), 0 0 20px #fff; display: flex; align-items: center; justify-content: center; }
-        #arrow { border-left: 25px solid transparent; border-right: 25px solid transparent; border-top: 50px solid var(--primary-accent); z-index: 10; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -100%); filter: drop-shadow(0 -3px 5px var(--primary-accent));}
+        #arrow { border-left: 25px solid transparent; border-right: 25px solid transparent; border-top: 50px solid var(--primary-accent); z-index: 10; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -100%); filter: drop-shadow(0 -3px 5px var(--primary-accent)); }
+
+        /* --- Estilos del Podio --- */
+        .podium {
+            display: flex; justify-content: center; align-items: flex-end;
+            gap: 15px; margin-top: 30px; color: #fff;
+        }
+        .podium-place {
+            background: var(--glass-bg); border: 2px solid var(--border-color);
+            border-radius: 10px; padding: 20px; width: 180px; text-align: center;
+            display: flex; flex-direction: column; justify-content: center;
+        }
+        .podium-place.place-1 {
+            order: 2; height: 200px; border-color: #ffd700; /* Gold */
+            box-shadow: 0 0 25px #ffd700;
+        }
+        .podium-place.place-2 {
+            order: 1; height: 150px; border-color: #c0c0c0; /* Silver */
+            box-shadow: 0 0 20px #c0c0c0;
+        }
+        .podium-place.place-3 {
+            order: 3; height: 100px; border-color: #cd7f32; /* Bronze */
+            box-shadow: 0 0 15px #cd7f32;
+        }
+        .podium-medal { font-size: 3em; }
+        .podium-name { font-size: 1.5em; font-weight: bold; margin: 10px 0; }
+        .podium-score { font-size: 1.2em; color: var(--glow-color); }
     </style>
 </head>
 <body>
@@ -147,9 +173,7 @@
                 return;
             }
             if (gameState.status === 'finished') {
-                waitingMessage.innerHTML = '<h1>¡Juego Terminado!</h1>';
-                gameView.style.display = 'none';
-                waitingMessage.style.display = 'block';
+                displayPodium(participants);
                 return;
             }
 
@@ -171,6 +195,35 @@
                 spinTheWheel(gameState);
                 lastKnownState.gameState.isSpinning = false;
             }
+        }
+
+        function displayPodium(participants) {
+            const sortedPlayers = [...participants].sort((a, b) => b.score - a.score);
+            const top3 = sortedPlayers.slice(0, 3);
+
+            let podiumHTML = `
+                <h1>¡Juego Terminado!</h1>
+                <h2>🏆 Podio de Ganadores 🏆</h2>
+                <div class="podium">
+            `;
+
+            const medals = ['🥇', '🥈', '🥉'];
+            top3.forEach((player, index) => {
+                if (player) {
+                    podiumHTML += `
+                        <div class="podium-place place-${index + 1}">
+                            <div class="podium-medal">${medals[index]}</div>
+                            <div class="podium-name">${player.name}</div>
+                            <div class="podium-score">${player.score} Puntos</div>
+                        </div>
+                    `;
+                }
+            });
+
+            podiumHTML += `</div>`;
+            waitingMessage.innerHTML = podiumHTML;
+            gameView.style.display = 'none';
+            waitingMessage.style.display = 'block';
         }
         
         function spinTheWheel(gameState) {
