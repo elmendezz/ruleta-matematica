@@ -354,9 +354,11 @@
                 gameSection.style.display = 'block';
                 const currentPlayer = localState.participants[localState.gameState.currentParticipantIndex];
                 playerDisplay.textContent = `Turno de: ${currentPlayer ? currentPlayer.name : ''}`;
-                spinBtn.disabled = localState.gameState.isSpinning;
-                correctBtn.disabled = localState.gameState.isSpinning;
-                incorrectBtn.disabled = localState.gameState.isSpinning;
+                
+                const isPlayerActionable = currentPlayer && !currentPlayer.isEliminated;
+                spinBtn.disabled = localState.gameState.isSpinning || !isPlayerActionable;
+                correctBtn.disabled = localState.gameState.isSpinning || !isPlayerActionable;
+                incorrectBtn.disabled = localState.gameState.isSpinning || !isPlayerActionable;
 
                 // Lógica para dibujar y girar la ruleta
                 if (localState.gameState.rouletteCategories && (!rouletteChart || JSON.stringify(rouletteChart.data.labels) !== JSON.stringify(localState.gameState.rouletteCategories))) {
