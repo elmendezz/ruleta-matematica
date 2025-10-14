@@ -33,9 +33,9 @@
             font-family: 'Exo 2', sans-serif;
             margin: 0; padding: 20px;
             background-color: var(--bg-color); color: var(--text-color);
-            display: flex; justify-content: center; align-items: center;
+            display: flex; justify-content: center; align-items: flex-start; /* Ajustado para scroll */
             min-height: 100vh; text-align: center;
-            overflow: hidden;
+            overflow-y: auto; /* Permite el scroll vertical */
         }
 
         /* --- Contenedor de "Cristal" --- */
@@ -144,6 +144,10 @@
 
         <div class="control-group" id="game-control-section" style="display: none;">
             <h2 id="current-player-teacher"></h2>
+            <div id="roulette-container" style="position: relative; max-width: 300px; margin: 20px auto;">
+                <div id="arrow" style="border-left: 20px solid transparent; border-right: 20px solid transparent; border-top: 40px solid var(--primary-accent); z-index: 10; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -100%); filter: drop-shadow(0 -3px 5px var(--primary-accent));"></div>
+                <canvas id="roulette-wheel"></canvas>
+            </div>
             <button id="spin-btn">Girar Ruleta</button>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                 <button class="correct" id="correct-btn">✅ Correcto</button>
@@ -173,8 +177,12 @@
         const manualCategoriesContainer = document.getElementById('manual-categories-container');
         const manualCategoriesInput = document.getElementById('manual-categories-input');
         const failuresInput = document.getElementById('failures-input');
+        const canvas = document.getElementById('roulette-wheel');
+        const ctx = canvas.getContext('2d');
 
         let localState = { participants: [], gameState: { status: 'waiting' } };
+        let oldState = {};
+        let rouletteChart = null;
 
         async function updateGameState(state) {
             loadingDiv.style.display = 'block';
@@ -193,7 +201,11 @@
         async function fetchGameState() {
             try {
                 const response = await fetch('/api/getGameState');
-                localState = await response.json();
+                const data = await response.json();
+                if (JSON.stringify(data) === JSON.stringify(localState)) return;
+                
+                oldState = localState;
+                localState = data;
                 renderUI();
             } catch (error) { console.error("Error al cargar estado.", error); }
         }
@@ -341,15 +353,35 @@
                 setupSection.style.display = 'none';
                 gameSection.style.display = 'block';
                 const currentPlayer = localState.participants[localState.gameState.currentParticipantIndex];
-                playerDisplay.textContent = `Turno de: ${currentPlayer.name}`;
+                playerDisplay.textContent = `Turno de: ${currentPlayer ? currentPlayer.name : ''}`;
                 spinBtn.disabled = localState.gameState.isSpinning;
                 correctBtn.disabled = localState.gameState.isSpinning;
                 incorrectBtn.disabled = localState.gameState.isSpinning;
+
+                // Lógica para dibujar y girar la ruleta
+                if (localState.gameState.rouletteCategories && (!rouletteChart || JSON.stringify(rouletteChart.data.labels) !== JSON.stringify(localState.gameState.rouletteCategories))) {
+                    rouletteChart = createRoulette(localState.gameState.rouletteCategories, localState.gameState.colors);
+                }
+                if (localState.gameState.isSpinning && !oldState?.gameState?.isSpinning) {
+                    spinTheWheel(localState.gameState);
+                }
+
             } else {
                 setupSection.style.display = 'block';
                 gameSection.style.display = 'none';
             }
         }
+
+        function createRoulette(categories, colors) {
+            if (rouletteChart) rouletteChart.destroy();
+            return new Chart(ctx, { type: 'doughnut', data: { labels: categories, datasets: [{ data: categories.map(() => 1), backgroundColor: colors, borderColor: 'rgba(0,0,20,0.8)', borderWidth: 4 }] }, options: { responsive: true, animation: { animateRotate: false }, plugins: { legend: { display: false }, tooltip: { enabled: false } } } });
+        }
+
+        function spinTheWheel(gameState) {
+            canvas.style.transition = 'transform 5s cubic-bezier(0.25, 0.1, 0.25, 1)';
+            canvas.style.transform = `rotate(${gameState.spinAngle}deg)`;
+        }
+
         setInterval(fetchGameState, 1700); // Actualizar cada 1.7 segundos
         fetchGameState(); // Carga inicial
     </script>

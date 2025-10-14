@@ -109,7 +109,7 @@
                     </table>
                 </section>
                 <section class="live-action">
-                    <h3>Turno Actual</h3>
+                    <h3 id="turn-title">Turno Actual</h3>
                     <div id="roulette-container" style="position: relative; max-width: 300px; margin: auto;">
                         <div id="arrow"></div>
                         <canvas id="roulette-wheel"></canvas>
@@ -125,6 +125,7 @@
         const waitingMessage = document.getElementById('waiting-message');
         const statsTbody = document.getElementById('stats-tbody');
         const lastResultDisplay = document.getElementById('last-result-display');
+        const turnTitle = document.getElementById('turn-title');
         const canvas = document.getElementById('roulette-wheel');
         const ctx = canvas.getContext('2d');
         
@@ -156,6 +157,9 @@
             waitingMessage.style.display = 'none';
 
             updatePlayerStats(participants, gameState);
+            
+            const currentPlayer = participants[gameState.currentParticipantIndex];
+            turnTitle.textContent = `Turno de: ${currentPlayer.name}`;
 
             if (gameState.lastResult) {
                 if(JSON.stringify(gameState.lastResult) !== JSON.stringify(oldState?.gameState?.lastResult)) {

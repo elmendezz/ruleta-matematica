@@ -187,7 +187,8 @@
             questionDisplay.textContent = gameState.currentQuestion;
             updateParticipantsList(participants, gameState.currentParticipantIndex);
 
-            if (!rouletteChart || JSON.stringify(rouletteChart.data.labels) !== JSON.stringify(gameState.rouletteCategories)) {
+            // Asegurarse de que hay categorías antes de dibujar/actualizar la ruleta
+            if (gameState.rouletteCategories && (!rouletteChart || JSON.stringify(rouletteChart.data.labels) !== JSON.stringify(gameState.rouletteCategories))) {
                 rouletteChart = createRoulette(gameState.rouletteCategories, gameState.colors);
             }
 
