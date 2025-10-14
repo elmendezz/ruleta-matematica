@@ -194,6 +194,30 @@
         let isUpdating = false; // Flag para controlar las actualizaciones
         let fetchInterval;
 
+        // --- Funciones para Cookies ---
+        function setCookie(name, value, days) {
+            let expires = "";
+            if (days) {
+                const date = new Date();
+                date.setTime(date.getTime() + (days*24*60*60*1000));
+                expires = "; expires=" + date.toUTCString();
+            }
+            document.cookie = name + "=" + (JSON.stringify(value) || "")  + expires + "; path=/";
+        }
+        function getCookie(name) {
+            const nameEQ = name + "=";
+            const ca = document.cookie.split(';');
+            for(let i=0;i < ca.length;i++) {
+                let c = ca[i];
+                while (c.charAt(0)==' ') c = c.substring(1,c.length);
+                if (c.indexOf(nameEQ) == 0) return JSON.parse(c.substring(nameEQ.length,c.length));
+            }
+            return null;
+        }
+        function eraseCookie(name) {   
+            document.cookie = name+'=; Max-Age=-99999999;';  
+        }
+
         async function updateGameState(state) {
             clearInterval(fetchInterval); // Detiene las actualizaciones automáticas
             isUpdating = true; // Pausa las actualizaciones automáticas
@@ -230,8 +254,9 @@
             const name = participantInput.value.trim();
             if (name) {
                 localState.participants.push({ name, score: 0, failures: 0, isEliminated: false });
-                // Envía el estado actualizado al servidor para guardar el nuevo participante
-                updateGameState({ ...localState, action: 'updateParticipants' });
+                // Guarda en cookie y actualiza UI
+                setCookie('participants', localState.participants, 1);
+                renderUI();
                 participantInput.value = '';
             }
         });
@@ -240,9 +265,9 @@
             if (e.target.classList.contains('remove-participant-btn')) {
                 const indexToRemove = parseInt(e.target.dataset.index, 10);
                 localState.participants.splice(indexToRemove, 1);
-                // Actualiza la UI localmente y luego envía el cambio al servidor
+                // Guarda en cookie y actualiza UI
+                setCookie('participants', localState.participants, 1);
                 renderUI();
-                updateGameState({ participants: localState.participants, gameState: localState.gameState, action: 'updateParticipants' });
             }
         });
 
@@ -304,6 +329,7 @@
                     currentQuestion: 'Gira la ruleta', lastResult: null
                 }
             };
+            eraseCookie('participants'); // Limpia la cookie al iniciar el juego
             updateGameState(newState);
         });
 
@@ -374,6 +400,7 @@
         resetBtn.addEventListener('click', () => {
             if (confirm('¿Seguro que quieres reiniciar todo el juego? Se perderán los participantes y la configuración.')) {
                 updateGameState({ action: 'reset', participants: [], gameState: { status: 'waiting', lastResult: null } });
+                eraseCookie('participants'); // Borra la cookie de participantes
             }
         });
 
@@ -455,6 +482,14 @@
         }
 
         const startFetching = (initialLoad = true) => {
+            // Carga inicial de participantes desde la cookie si el juego no ha empezado
+            if (localState.gameState.status === 'waiting') {
+                const cookieParticipants = getCookie('participants');
+                if (cookieParticipants) {
+                    localState.participants = cookieParticipants;
+                    renderUI();
+                }
+            }
             if (initialLoad) {
                 fetchGameState(); // Carga inicial solo la primera vez
             }
