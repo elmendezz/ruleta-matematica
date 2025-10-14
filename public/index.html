@@ -159,7 +159,7 @@
         });
 
         async function fetchAndUpdate() {
-            const response = await fetch('/gamestate.json?cache-bust=' + new Date().getTime());
+            const response = await fetch('/api/getGameState');
             const data = await response.json();
 
             if (JSON.stringify(data) === JSON.stringify(lastKnownState)) return;

@@ -133,7 +133,7 @@
         let resultTimeout;
 
         async function fetchAndUpdate() {
-            const response = await fetch('/gamestate.json?cache-bust=' + new Date().getTime());
+            const response = await fetch('/api/getGameState');
             const data = await response.json();
 
             if (JSON.stringify(data) === JSON.stringify(lastKnownState)) return;
@@ -171,6 +171,21 @@
             if (!rouletteChart || JSON.stringify(rouletteChart.data.labels) !== JSON.stringify(gameState.rouletteCategories)) {
                 rouletteChart = createRoulette(gameState.rouletteCategories, gameState.colors);
             }
+
+            if (gameState.isSpinning && !oldState?.gameState?.isSpinning) {
+                spinTheWheel(gameState);
+            }
+        }
+
+        function spinTheWheel(gameState) {
+            // Asegurarse de que no hay una transición en curso
+            canvas.style.transition = 'none';
+            canvas.style.transform = `rotate(0deg)`;
+            // Forzar un reflow para aplicar el estado inicial antes de la transición
+            canvas.offsetHeight; 
+            // Aplicar la transición y la rotación final
+            canvas.style.transition = 'transform 5s cubic-bezier(0.25, 0.1, 0.25, 1)';
+            canvas.style.transform = `rotate(${gameState.spinAngle}deg)`;
         }
 
         function displayPodium(participants) {

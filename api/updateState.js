@@ -60,13 +60,16 @@ export default async function handler(request, response) {
 
         // --- LÓGICA DE IA ---
         if (action === 'startGame') {
-            const topic = gameState.topic;
-            const prompt = `Genera un array JSON con 5 categorías de cálculo mental para una ruleta sobre el tema: "${topic}". El formato debe ser un array de strings, por ejemplo: ["Sumas", "Restas", "Multiplicación"].`;
-            const result = await model.generateContent(prompt);
-            const text = result.response.text();
-            // Limpiar la respuesta de la IA para obtener solo el JSON
-            const categories = JSON.parse(text.match(/\[.*?\]/s)[0]);
-            gameState.rouletteCategories = categories;
+            // Si las categorías no vienen definidas manualmente, se generan con la IA.
+            if (!gameState.rouletteCategories || gameState.rouletteCategories.length === 0) {
+                const topic = gameState.topic;
+                const prompt = `Genera un array JSON con 5 categorías de cálculo mental para una ruleta sobre el tema: "${topic}". El formato debe ser un array de strings, por ejemplo: ["Sumas", "Restas", "Multiplicación"].`;
+                const result = await model.generateContent(prompt);
+                const text = result.response.text();
+                // Limpiar la respuesta de la IA para obtener solo el JSON
+                const categories = JSON.parse(text.match(/\[.*?\]/s)[0]);
+                gameState.rouletteCategories = categories;
+            }
             gameState.colors = ['#4a90e2', '#50e3c2', '#f5a623', '#bd10e0', '#9013fe', '#e74c3c'];
         }
 

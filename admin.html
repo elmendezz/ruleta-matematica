@@ -115,6 +115,20 @@
         <div class="control-group" id="setup-section">
             <h2>Configuración</h2>
             <input type="text" id="topic-input" placeholder="Tema para la IA (Ej: El Sistema Solar)" style="width: calc(100% - 28px); margin-bottom: 10px;">
+            <div style="margin-bottom: 10px; text-align: left;">
+                <label>
+                    <input type="radio" name="category-source" value="ai" checked> Generar categorías con IA
+                </label>
+                <label>
+                    <input type="radio" name="category-source" value="manual"> Introducir categorías manualmente
+                </label>
+            </div>
+            <div id="manual-categories-container" style="display: none; margin-bottom: 10px;">
+                <textarea id="manual-categories-input" rows="5" placeholder="Introduce las categorías, una por línea.&#10;Ej: Sumas&#10;Restas&#10;Multiplicaciones"></textarea>
+                <style>
+                    #manual-categories-input { width: calc(100% - 28px); background-color: rgba(0,0,20,0.5); color: var(--text-color); border: 2px solid var(--border-color); border-radius: 8px; padding: 12px; font-family: inherit; }
+                </style>
+            </div>
             <div style="margin-bottom: 10px;">
                 <label for="failures-input" style="display: block; margin-bottom: 5px;">Oportunidades por jugador:</label>
                 <input type="number" id="failures-input" value="3" min="1" style="width: calc(100% - 28px);">
@@ -156,6 +170,8 @@
         const setupSection = document.getElementById('setup-section');
         const gameSection = document.getElementById('game-control-section');
         const loadingDiv = document.getElementById('loading');
+        const manualCategoriesContainer = document.getElementById('manual-categories-container');
+        const manualCategoriesInput = document.getElementById('manual-categories-input');
         const failuresInput = document.getElementById('failures-input');
         
         let localState = { participants: [], gameState: { status: 'waiting' } };
@@ -176,7 +192,7 @@
         
         async function fetchGameState() {
             try {
-                const response = await fetch('/gamestate.json?cache-bust=' + new Date().getTime());
+                const response = await fetch('/api/getGameState');
                 localState = await response.json();
                 renderUI();
             } catch (error) { console.error("Error al cargar estado.", error); }
@@ -192,19 +208,33 @@
         });
 
         startBtn.addEventListener('click', () => {
-            if (localState.participants.length < 1 || !topicInput.value.trim()) {
-                return alert('Añade participantes y un tema.');
+            const categorySource = document.querySelector('input[name="category-source"]:checked').value;
+            const topic = topicInput.value.trim();
+            const manualCategories = manualCategoriesInput.value.trim().split('\n').filter(c => c.trim() !== '');
+
+            if (localState.participants.length < 1) {
+                return alert('Añade al menos un participante.');
             }
+            if (categorySource === 'ai' && !topic) {
+                return alert('Introduce un tema para que la IA genere las categorías.');
+            }
+            if (categorySource === 'manual' && manualCategories.length < 2) {
+                return alert('Introduce al menos 2 categorías manualmente, una por línea.');
+            }
+
             for (let i = localState.participants.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [localState.participants[i], localState.participants[j]] = [localState.participants[j], localState.participants[i]];
             }
             const maxFailures = parseInt(failuresInput.value, 10) || 3;
 
+            const rouletteCategories = categorySource === 'manual' ? manualCategories : null;
+
             const newState = {
                 action: 'startGame',
-                topic: topicInput.value.trim(),
+                topic: topic,
                 participants: localState.participants,
+                rouletteCategories: rouletteCategories, // Envía las categorías manuales si existen
                 gameState: {
                     status: 'running', 
                     maxFailures: maxFailures,
@@ -291,6 +321,12 @@
                 newState.gameState.status = 'finished';
                 updateGameState(newState);
             }
+        });
+
+        document.querySelectorAll('input[name="category-source"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                manualCategoriesContainer.style.display = e.target.value === 'manual' ? 'block' : 'none';
+            });
         });
 
         function renderUI() {
