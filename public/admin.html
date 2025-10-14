@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <title>Panel de Maestro 🚀</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@400;700;900&display=swap');
@@ -239,7 +240,9 @@
             if (e.target.classList.contains('remove-participant-btn')) {
                 const indexToRemove = parseInt(e.target.dataset.index, 10);
                 localState.participants.splice(indexToRemove, 1);
-                updateGameState({ ...localState, action: 'updateParticipants' });
+                // Actualiza la UI localmente y luego envía el cambio al servidor
+                renderUI();
+                updateGameState({ participants: localState.participants, gameState: localState.gameState, action: 'updateParticipants' });
             }
         });
 
