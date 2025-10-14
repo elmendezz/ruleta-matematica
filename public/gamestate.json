@@ -9,7 +9,7 @@
     },
     {
       "name": "yo",
-      "score": 0,
+      "score": 10,
       "failures": 0,
       "isEliminated": false
     },
@@ -28,11 +28,11 @@
   ],
   "gameState": {
     "status": "running",
-    "currentParticipantIndex": 1,
+    "currentParticipantIndex": 2,
     "currentQuestion": "Turno del siguiente jugador.",
     "lastResult": {
-      "participantName": "ella",
-      "result": "incorrect"
+      "participantName": "yo",
+      "result": "correct"
     },
     "isSpinning": true,
     "spinAngle": 2146.079220802843
