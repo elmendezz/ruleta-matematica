@@ -80,15 +80,18 @@ export default async function handler(request, response) {
             if (gameState.manualEntries && gameState.manualEntries.length > 0) {
                 const entry = gameState.manualEntries.find(e => e.question === selectedQuestion);
                 if (entry) {
-                    gameState.currentQuestion = `${entry.question}\n(Respuesta: ${entry.answer})`;
+                    gameState.currentQuestion = entry.question;
+                    gameState.currentAnswer = entry.answer; // La respuesta se guarda en un campo separado
                 } else {
                     gameState.currentQuestion = selectedQuestion; // Si no encuentra respuesta, muestra solo la pregunta
+                    gameState.currentAnswer = null;
                 }
             } else {
                 // Si no hay entradas manuales, usa la IA como antes
                 const prompt = `Genera una pregunta de cálculo mental muy corta y simple para un niño de primaria sobre la categoría: "${selectedQuestion}". Responde únicamente con la pregunta en formato de string.`;
                 const result = await model.generateContent(prompt);
                 gameState.currentQuestion = result.response.text().trim();
+                gameState.currentAnswer = null; // La IA no provee respuesta verificable
             }
         }
 

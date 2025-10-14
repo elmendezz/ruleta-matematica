@@ -102,6 +102,9 @@
 
         .eliminate { border-color: var(--eliminate-color); box-shadow: 0 0 5px var(--eliminate-color), inset 0 0 8px var(--eliminate-color); }
         .eliminate:hover:not(:disabled) { background-color: var(--eliminate-color); box-shadow: 0 0 25px var(--eliminate-color); }
+
+        #answer-display {
+        }
     </style>
 </head>
 <body>
@@ -183,8 +186,12 @@
         let localState = { participants: [], gameState: { status: 'waiting' } };
         let oldState = {};
         let rouletteChart = null;
+        let isUpdating = false; // Flag para controlar las actualizaciones
+        let fetchInterval;
 
         async function updateGameState(state) {
+            clearInterval(fetchInterval); // Detiene las actualizaciones automáticas
+            isUpdating = true; // Pausa las actualizaciones automáticas
             loadingDiv.style.display = 'block';
             try {
                 const response = await fetch('/api/updateState', {
@@ -195,7 +202,11 @@
                 if (!response.ok) throw new Error('Error al actualizar.');
                 await fetchGameState();
             } catch (error) { console.error(error); alert(error.message); }
-            finally { loadingDiv.style.display = 'none'; }
+            finally { 
+                loadingDiv.style.display = 'none';
+                isUpdating = false; // Reanuda las actualizaciones automáticas
+                startFetching(false); // Reinicia el intervalo sin la carga inicial
+            }
         }
         
         async function fetchGameState() {
@@ -203,7 +214,7 @@
                 const response = await fetch('/api/getGameState');
                 const data = await response.json();
                 // Solo renderizar si hay cambios reales en el estado
-                if (JSON.stringify(data) === JSON.stringify(localState)) return;
+                if (JSON.stringify(data) === JSON.stringify(localState) || isUpdating) return;
 
                 localState = data;
                 renderUI();
@@ -409,8 +420,14 @@
             }, { once: true });
         }
 
-        setInterval(fetchGameState, 1700); // Actualizar cada 1.7 segundos
-        fetchGameState(); // Carga inicial
+        const startFetching = (initialLoad = true) => {
+            if (initialLoad) {
+                fetchGameState(); // Carga inicial solo la primera vez
+            }
+            fetchInterval = setInterval(fetchGameState, 1700);
+        };
+
+        startFetching(true);
     </script>
 </body>
 </html>
