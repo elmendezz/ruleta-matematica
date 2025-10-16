@@ -85,8 +85,8 @@
                 <section class="live-action">
                     <h3>Turno Actual</h3>
                     <div id="roulette-container" style="position: relative; max-width: 300px; margin: auto;">
-                        <div id="arrow"></div>
-                        <canvas id="roulette-wheel"></canvas>
+                        <div id="arrow" style="border-left: 20px solid transparent; border-right: 20px solid transparent; border-top: 40px solid var(--primary-accent); z-index: 10; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -100%); filter: drop-shadow(0 -3px 5px var(--primary-accent));"></div>
+                        <canvas id="roulette-wheel" width="300" height="300"></canvas>
                     </div>
                     <div id="last-result-display"></div>
                 </section>
@@ -107,7 +107,7 @@
         let resultTimeout;
 
         async function fetchAndUpdate() {
-            const response = await fetch('/gamestate.json?cache-bust=' + new Date().getTime());
+            const response = await fetch('/api/getGameState');
             const data = await response.json();
 
             if (JSON.stringify(data) === JSON.stringify(lastKnownState)) return;
@@ -122,7 +122,11 @@
                 return;
             }
             if (gameState.status === 'finished') {
-                waitingMessage.innerHTML = '<h1>¡Juego Terminado!</h1>';
+                // Reemplazado para mostrar el podio de ganadores
+                // waitingMessage.innerHTML = '<h1>¡Juego Terminado!</h1>';
+                // gameView.style.display = 'none';
+                // waitingMessage.style.display = 'block';
+                displayPodium(participants);
                 gameView.style.display = 'none';
                 waitingMessage.style.display = 'block';
                 return;
@@ -131,7 +135,7 @@
             gameView.style.display = 'block';
             waitingMessage.style.display = 'none';
 
-            updatePlayerStats(participants, gameState.currentParticipantIndex);
+            updatePlayerStats(participants, gameState);
 
             if (gameState.lastResult) {
                 if(JSON.stringify(gameState.lastResult) !== JSON.stringify(oldState?.gameState?.lastResult)) {
@@ -149,16 +153,46 @@
             }
         }
 
-        function updatePlayerStats(participants, currentIndex) {
+        function displayPodium(participants) {
+            const sortedPlayers = [...participants].sort((a, b) => b.score - a.score);
+            const top3 = sortedPlayers.slice(0, 3);
+
+            let podiumHTML = `
+                <h1>¡Juego Terminado!</h1>
+                <h2>🏆 Podio de Ganadores 🏆</h2>
+                <div class="podium">
+            `;
+
+            const medals = ['🥇', '🥈', '🥉'];
+            top3.forEach((player, index) => {
+                if (player) {
+                    podiumHTML += `
+                        <div class="podium-place place-${index + 1}">
+                            <div class="podium-medal">${medals[index]}</div>
+                            <div class="podium-name">${player.name}</div>
+                            <div class="podium-score">${player.score} Puntos</div>
+                        </div>
+                    `;
+                }
+            });
+
+            podiumHTML += `</div>`;
+            waitingMessage.innerHTML = podiumHTML;
+            gameView.style.display = 'none';
+            waitingMessage.style.display = 'block';
+        }
+
+        function updatePlayerStats(participants, gameState) {
             statsTbody.innerHTML = '';
+            const maxFailures = gameState.maxFailures || 3;
             participants.forEach((p, index) => {
                 const row = document.createElement('tr');
                 if(p.isEliminated) row.classList.add('eliminated');
                 
                 row.innerHTML = `
-                    <td>${p.name} ${index === currentIndex && !p.isEliminated ? '☄️' : ''}</td>
+                    <td>${p.name} ${index === gameState.currentParticipantIndex && !p.isEliminated ? '☄️' : ''}</td>
                     <td>${p.score}</td>
-                    <td>${'🔴'.repeat(p.failures)}${'⚪️'.repeat(3 - p.failures)}</td>
+                    <td>${'🔴'.repeat(p.failures)}${'⚪️'.repeat(Math.max(0, maxFailures - p.failures))}</td>
                     <td>${p.isEliminated ? 'Eliminado' : 'Activo'}</td>
                 `;
                 statsTbody.appendChild(row);
@@ -170,7 +204,7 @@
             return new Chart(ctx, { type: 'doughnut', data: { labels: categories, datasets: [{ data: categories.map(() => 1), backgroundColor: colors, borderColor: 'rgba(0,0,20,0.8)', borderWidth: 4 }] }, options: { responsive: true, animation: { animateRotate: false }, plugins: { legend: { display: false }, tooltip: { enabled: false } } } });
         }
         
-        setInterval(fetchAndUpdate, 2000);
+        setInterval(fetchAndUpdate, 1700);
         fetchAndUpdate();
     </script>
 </body>

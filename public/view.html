@@ -64,6 +64,23 @@
         #last-result-display.incorrect { background: var(--fail-color); color: #fff; box-shadow: 0 0 20px var(--fail-color); }
         #arrow { border-left: 20px solid transparent; border-right: 20px solid transparent; border-top: 40px solid var(--primary-accent); z-index: 10; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -100%); filter: drop-shadow(0 -3px 5px var(--primary-accent)); }
 
+        /* --- Fallback de la Ruleta --- */
+        #fallback-roulette {
+            display: none; /* Oculto por defecto */
+            width: 300px; height: 300px;
+            border: 4px solid var(--border-color);
+            border-radius: 50%;
+            position: relative;
+            margin: auto;
+            align-items: center; justify-content: center;
+            text-align: center;
+            font-size: 1.5em;
+            color: var(--glow-color);
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        #fallback-btn { display: none; margin-top: 15px; background: var(--eliminate-color); border-color: var(--eliminate-color); }
+
         /* --- Estilos del Podio --- */
         .podium {
             display: flex; justify-content: center; align-items: flex-end;
@@ -112,8 +129,10 @@
                     <h3 id="turn-title">Turno Actual</h3>
                     <div id="roulette-container" style="position: relative; max-width: 300px; margin: auto;">
                         <div id="arrow" style="border-left: 20px solid transparent; border-right: 20px solid transparent; border-top: 40px solid var(--primary-accent); z-index: 10; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -100%); filter: drop-shadow(0 -3px 5px var(--primary-accent));"></div>
+                        <div id="fallback-roulette"></div>
                         <canvas id="roulette-wheel" width="300" height="300"></canvas>
                     </div>
+                    <button id="fallback-btn">Mostrar Ruleta Alternativa</button>
                     <div id="last-result-display"></div>
                 </section>
             </div>
@@ -127,6 +146,8 @@
         const lastResultDisplay = document.getElementById('last-result-display');
         const turnTitle = document.getElementById('turn-title');
         const canvas = document.getElementById('roulette-wheel');
+        const fallbackRoulette = document.getElementById('fallback-roulette');
+        const fallbackBtn = document.getElementById('fallback-btn');
         const ctx = canvas.getContext('2d');
         
         let rouletteChart = null;
@@ -156,6 +177,14 @@
             gameView.style.display = 'block';
             waitingMessage.style.display = 'none';
 
+            // Fallback: si la ruleta no se ha creado después de un tiempo, muestra el botón
+            setTimeout(() => {
+                if (!rouletteChart && gameState.status === 'running') {
+                    fallbackBtn.style.display = 'block';
+                    fallbackRoulette.innerHTML = `La ruleta gráfica no cargó.<br/>Categorías:<br/>${gameState.rouletteCategories.join(', ')}`;
+                }
+            }, 3000);
+
             updatePlayerStats(participants, gameState);
             
             const currentPlayer = participants[gameState.currentParticipantIndex];
@@ -179,6 +208,12 @@
             if (gameState.isSpinning && !oldState?.gameState?.isSpinning) {
                 spinTheWheel(gameState);
             }
+        }
+
+        fallbackBtn.addEventListener('click', () => {
+            canvas.style.display = 'none';
+            fallbackRoulette.style.display = 'flex';
+            fallbackBtn.style.display = 'none';
         }
 
         function spinTheWheel(gameState) {
