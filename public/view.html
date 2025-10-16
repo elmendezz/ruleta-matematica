@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Estadísticas del Juego</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <title>Estadísticas del Juego 📊</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@400;700;900&display=swap');
 
@@ -17,7 +16,6 @@
             --text-color: #e0e0ff;
             --success-color: #00ff7f;
             --fail-color: #ff4d4d;
-            --wheel-text-color: #000;
         }
 
         @keyframes move-twink-back { from {background-position:0 0;} to {background-position:-10000px 5000px;} }
@@ -63,13 +61,6 @@
         #last-result-display.visible { opacity: 1; transform: scale(1); }
         #last-result-display.correct { background: var(--success-color); color: #000; box-shadow: 0 0 20px var(--success-color); }
 
-        #fallback-roulette {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-        }
         #last-result-display.incorrect { background: var(--fail-color); color: #fff; box-shadow: 0 0 20px var(--fail-color); }
         #arrow { border-left: 20px solid transparent; border-right: 20px solid transparent; border-top: 40px solid var(--primary-accent); z-index: 10; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -100%); filter: drop-shadow(0 -3px 5px var(--primary-accent)); }
 
@@ -159,7 +150,6 @@
         const fallbackBtn = document.getElementById('fallback-btn');
         const ctx = canvas.getContext('2d');
         
-        let rouletteChart = null;
         let lastKnownState = {};
 
         let resultTimeout;
@@ -181,18 +171,6 @@
                 return;
             }
 
-            if (gameState.status === 'finished') {
-                displayPodium(participants);
-                return;
-            }
-
-            gameView.style.display = 'block';
-            waitingMessage.style.display = 'none';
-
-            
-            const currentPlayer = participants[gameState.currentParticipantIndex];
-            turnTitle.textContent = `Turno de: ${currentPlayer.name}`;
-
             if (gameState.lastResult) {
                 if(JSON.stringify(gameState.lastResult) !== JSON.stringify(oldState?.gameState?.lastResult)) {
                     lastResultDisplay.textContent = `${gameState.lastResult.participantName} respondió ${gameState.lastResult.result === 'correct' ? '¡CORRECTAMENTE!' : 'incorrectamente'}.`;
@@ -204,6 +182,22 @@
                 }
             }
 
+            if (gameState.status === 'finished') {
+                displayPodium(participants);
+                return;
+            }
+
+            gameView.style.display = 'block';
+            waitingMessage.style.display = 'none';
+
+            const currentPlayer = participants[gameState.currentParticipantIndex];
+            if (currentPlayer) {
+                turnTitle.textContent = `Turno de: ${currentPlayer.name}`;
+            } else {
+                turnTitle.textContent = 'Esperando jugador...';
+            }
+
+
             updatePlayerStats(participants, gameState);
             drawRoulette(gameState.rouletteCategories, gameState.colors, gameState.spinAngle || 0);
         }
@@ -214,7 +208,7 @@
             canvas.style.display = 'none';
             fallbackRoulette.style.display = 'flex';
             fallbackBtn.style.display = 'none';
-        }
+        });
 
         function drawRoulette(categories, colors, angle) {
             const numSegments = categories.length;
@@ -222,6 +216,11 @@
             const radius = Math.min(canvas.width, canvas.height) / 2;
             const centerX = canvas.width / 2;
             const centerY = canvas.height / 2;
+
+            if (!categories || categories.length === 0) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height); // Limpia el canvas si no hay categorías
+                return;
+            }
 
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -250,11 +249,6 @@
 
             }
 
-
-        }
-
-        // Asegúrate de llamar a esta función cuando el estado del juego cambie y necesites actualizar la visualización de la ruleta.
-        function updateRoulette() {
 
         }
 

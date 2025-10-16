@@ -3,7 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <title>Panel de Maestro 🚀</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@400;700;900&display=swap');
@@ -190,7 +189,6 @@
 
         let localState = { participants: [], gameState: { status: 'waiting' } };
         let oldState = {};
-        let rouletteChart = null;
         let isUpdating = false; // Flag para controlar las actualizaciones
         let fetchInterval;
 
@@ -440,12 +438,8 @@
                 incorrectBtn.disabled = localState.gameState.isSpinning || !isPlayerActionable;
 
                 // Lógica para dibujar y girar la ruleta
-                if (localState.gameState.rouletteCategories && (!rouletteChart || JSON.stringify(rouletteChart.data.labels) !== JSON.stringify(localState.gameState.rouletteCategories))) {
-                    rouletteChart = createRoulette(localState.gameState.rouletteCategories, localState.gameState.colors);
-                }
-                if (localState.gameState.isSpinning && oldState?.gameState?.isSpinning === false) {
-                    spinTheWheel(localState.gameState);
-                }
+                drawRoulette(localState.gameState.rouletteCategories, localState.gameState.colors);
+                if (localState.gameState.isSpinning && oldState?.gameState?.isSpinning === false) spinTheWheel(localState.gameState);
 
             } else {
                 setupSection.style.display = 'block';
@@ -455,9 +449,36 @@
             oldState = JSON.parse(JSON.stringify(localState));
         }
 
-        function createRoulette(categories, colors) {
-            if (rouletteChart) rouletteChart.destroy();
-            return new Chart(ctx, { type: 'doughnut', data: { labels: categories, datasets: [{ data: categories.map(() => 1), backgroundColor: colors, borderColor: 'rgba(0,0,20,0.8)', borderWidth: 4 }] }, options: { responsive: true, animation: { animateRotate: false }, plugins: { legend: { display: false }, tooltip: { enabled: false } } } });
+        function drawRoulette(categories, colors, angle = 0) {
+            if (!categories || categories.length === 0) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                return;
+            }
+            const numSegments = categories.length;
+            const anglePerSegment = 360 / numSegments;
+            const radius = Math.min(canvas.width, canvas.height) / 2;
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            for (let i = 0; i < numSegments; i++) {
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.arc(centerX, centerY, radius, (i * anglePerSegment + angle - 90) * Math.PI / 180, ((i + 1) * anglePerSegment + angle - 90) * Math.PI / 180);
+                ctx.closePath();
+                ctx.fillStyle = colors[i % colors.length];
+                ctx.fill();
+
+                ctx.save();
+                ctx.translate(centerX, centerY);
+                ctx.rotate(((i + 0.5) * anglePerSegment + angle) * Math.PI / 180);
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 16px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(categories[i], radius * 0.7, 5);
+                ctx.restore();
+            }
         }
 
         function spinTheWheel(gameState) {
