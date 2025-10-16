@@ -69,6 +69,14 @@
         #question-display { font-size: 5em; font-weight: bold; color: #fff; min-height: 150px; text-shadow: 0 0 10px var(--glow-color), 0 0 20px #fff; display: flex; align-items: center; justify-content: center; }
         #arrow { border-left: 25px solid transparent; border-right: 25px solid transparent; border-top: 50px solid var(--primary-accent); z-index: 10; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -100%); filter: drop-shadow(0 -3px 5px var(--primary-accent)); }
 
+        #fallback-roulette {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
         /* --- Estilos del Podio --- */
         .podium {
             display: flex; justify-content: center; align-items: flex-end;
@@ -111,10 +119,12 @@
                     <h2 id="topic-title"></h2>
                     <div id="roulette-container" style="position: relative; max-width: 500px; margin: auto;">
                         <div id="arrow" style="border-left: 25px solid transparent; border-right: 25px solid transparent; border-top: 50px solid var(--primary-accent); z-index: 10; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -100%); filter: drop-shadow(0 -3px 5px var(--primary-accent));"></div>
-                        <canvas id="roulette-wheel" width="500" height="500"></canvas>
+                        <canvas id="roulette-wheel" width="500" height="500" style="position: absolute; left: 0; top: 0;"></canvas>
+                        <div id="fallback-roulette"></div>
                     </div>
                     <h3 id="current-participant-display"></h3>
                     <div id="question-display"></div>
+                    <div id="result-display"></div>
                 </section>
             </div>
         </div>
@@ -131,6 +141,7 @@
         const participantDisplay = document.getElementById('current-participant-display');
         const canvas = document.getElementById('roulette-wheel');
         const ctx = canvas.getContext('2d');
+        const resultDisplay = document.getElementById('result-display');
         
         let rouletteChart = null;
         let lastKnownState = {};
@@ -165,7 +176,6 @@
             if (JSON.stringify(data) === JSON.stringify(lastKnownState)) return;
             lastKnownState = data;
 
-            const { participants, gameState } = data;
 
             if (gameState.status !== 'running' && gameState.status !== 'finished') {
                 gameView.style.display = 'none';
@@ -175,6 +185,7 @@
             if (gameState.status === 'finished') {
                 displayPodium(participants);
                 return;
+
             }
 
             gameView.style.display = 'block';
@@ -187,13 +198,8 @@
             questionDisplay.textContent = gameState.currentQuestion;
             updateParticipantsList(participants, gameState.currentParticipantIndex);
 
-            // Asegurarse de que hay categorías antes de dibujar/actualizar la ruleta
-            if (gameState.rouletteCategories && (!rouletteChart || JSON.stringify(rouletteChart.data.labels) !== JSON.stringify(gameState.rouletteCategories))) {
-                rouletteChart = createRoulette(gameState.rouletteCategories, gameState.colors);
-            }
-
-            if (gameState.isSpinning) {
-                spinTheWheel(gameState);
+            if (gameState.rouletteCategories && gameState.colors) {
+                drawRoulette(gameState.rouletteCategories, gameState.colors, gameState.spinAngle || 0);
             }
         }
 
@@ -226,10 +232,7 @@
             waitingMessage.style.display = 'block';
         }
         
-        function spinTheWheel(gameState) {
-            canvas.style.transition = 'transform 6.2s cubic-bezier(0.25, 0.1, 0.25, 1)';
-            canvas.style.transform = `rotate(${gameState.spinAngle}deg)`;
-        }
+
 
         function updateParticipantsList(participants, currentIndex) {
             list.innerHTML = '';
@@ -241,25 +244,47 @@
                 list.appendChild(li);
             });
         }
-        
-        function createRoulette(categories, colors) {
-            if (rouletteChart) rouletteChart.destroy();
-            return new Chart(ctx, {
-                type: 'doughnut',
-                data: { 
-                    labels: categories, 
-                    datasets: [{ 
-                        data: categories.map(() => 1), 
-                        backgroundColor: colors,
-                        borderColor: 'rgba(0,0,20,0.8)',
-                        borderWidth: 4
-                    }] 
-                },
-                options: { responsive: true, animation: { animateRotate: false }, plugins: { legend: { display: false }, tooltip: { enabled: false } } }
-            });
+
+        function drawRoulette(categories, colors, angle) {
+            const numSegments = categories.length;
+            const anglePerSegment = 360 / numSegments;
+            const radius = Math.min(canvas.width, canvas.height) / 2;
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            for (let i = 0; i < numSegments; i++) {
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.arc(centerX, centerY, radius, (i * anglePerSegment + angle - 90) * Math.PI / 180, ((i + 1) * anglePerSegment + angle - 90) * Math.PI / 180);
+                ctx.closePath();
+                ctx.fillStyle = colors[i % colors.length];
+                ctx.fill();
+
+                ctx.save();
+                ctx.translate(centerX, centerY);
+                ctx.rotate(((i + 0.5) * anglePerSegment + angle) * Math.PI / 180);
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 20px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(categories[i], radius * 0.7, 0);
+                ctx.restore();
+            }
+
+            if (angle !== 0) {
+                 // Lógica para la animación
+                canvas.style.transition = 'transform 6.2s cubic-bezier(0.25, 0.1, 0.25, 1)';
+                canvas.style.transform = `rotate(${angle}deg)`;
+
+            }
+
         }
+        
+
 
         setInterval(fetchAndUpdate, 1700);
+
         fetchAndUpdate();
     </script>
 </body>
