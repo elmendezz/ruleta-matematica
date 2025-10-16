@@ -229,7 +229,9 @@
                     body: JSON.stringify(state),
                 });
                 if (!response.ok) throw new Error('Error al actualizar.');
-                await fetchGameState();
+                const updatedState = await response.json(); // Obtener el estado actualizado de la respuesta
+                localState = updatedState; // Actualizar el estado local directamente
+                renderUI(); // Renderizar la UI con el estado correcto
             } catch (error) { console.error(error); alert(error.message); }
             finally { 
                 loadingDiv.style.display = 'none';

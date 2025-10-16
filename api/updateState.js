@@ -134,7 +134,7 @@ export default async function handler(request, response) {
             throw new Error(`GitHub API error: ${commitResponse.statusText}`);
         }
 
-        response.status(200).json({ success: true, message: 'Game state updated' });
+        response.status(200).json(gameState); // Devolver el estado actualizado
 
     } catch (error) {
         console.error(error);
