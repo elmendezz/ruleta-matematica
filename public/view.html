@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Estadísticas del Juego 📊</title>
+    <title>Estadísticas del Juego</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@400;700;900&display=swap');
 
@@ -60,7 +60,6 @@
         #last-result-display { padding: 15px; border-radius: 8px; margin-top: 20px; font-size: 1.5em; font-weight: bold; opacity: 0; transform: scale(0.8); transition: all 0.5s ease; }
         #last-result-display.visible { opacity: 1; transform: scale(1); }
         #last-result-display.correct { background: var(--success-color); color: #000; box-shadow: 0 0 20px var(--success-color); }
-
         #last-result-display.incorrect { background: var(--fail-color); color: #fff; box-shadow: 0 0 20px var(--fail-color); }
         #arrow { border-left: 20px solid transparent; border-right: 20px solid transparent; border-top: 40px solid var(--primary-accent); z-index: 10; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -100%); filter: drop-shadow(0 -3px 5px var(--primary-accent)); }
 
@@ -129,8 +128,7 @@
                     <h3 id="turn-title">Turno Actual</h3>
                     <div id="roulette-container" style="position: relative; max-width: 300px; margin: auto;">
                         <div id="arrow" style="border-left: 20px solid transparent; border-right: 20px solid transparent; border-top: 40px solid var(--primary-accent); z-index: 10; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -100%); filter: drop-shadow(0 -3px 5px var(--primary-accent));"></div>
-                        <div id="fallback-roulette"></div>
-                        <canvas id="roulette-wheel" width="300" height="300"></canvas>
+                        <img id="roulette-wheel" width="300" height="300" alt="Ruleta del juego">
                     </div>
                     <button id="fallback-btn">Mostrar Ruleta Alternativa</button>
                     <div id="last-result-display"></div>
@@ -145,13 +143,11 @@
         const statsTbody = document.getElementById('stats-tbody');
         const lastResultDisplay = document.getElementById('last-result-display');
         const turnTitle = document.getElementById('turn-title');
-        const canvas = document.getElementById('roulette-wheel');
-        const fallbackRoulette = document.getElementById('fallback-roulette');
-        const fallbackBtn = document.getElementById('fallback-btn');
-        const ctx = canvas.getContext('2d');
+        const rouletteImage = document.getElementById('roulette-wheel');
+        // const fallbackRoulette = document.getElementById('fallback-roulette');
+        // const fallbackBtn = document.getElementById('fallback-btn');
         
         let lastKnownState = {};
-
         let resultTimeout;
 
         async function fetchAndUpdate() {
@@ -160,7 +156,6 @@
 
             if (JSON.stringify(data) === JSON.stringify(lastKnownState)) return;
             const oldState = lastKnownState;
-
             lastKnownState = data;
 
             const { participants, gameState } = data;
@@ -170,6 +165,18 @@
                 waitingMessage.style.display = 'block';
                 return;
             }
+            if (gameState.status === 'finished') {
+                displayPodium(participants);
+                return;
+            }
+
+            gameView.style.display = 'block';
+            waitingMessage.style.display = 'none';
+
+            updatePlayerStats(participants, gameState);
+            
+            const currentPlayer = participants[gameState.currentParticipantIndex];
+            turnTitle.textContent = `Turno de: ${currentPlayer.name}`;
 
             if (gameState.lastResult) {
                 if(JSON.stringify(gameState.lastResult) !== JSON.stringify(oldState?.gameState?.lastResult)) {
@@ -182,74 +189,39 @@
                 }
             }
 
-            if (gameState.status === 'finished') {
-                displayPodium(participants);
-                return;
-            }
-
-            gameView.style.display = 'block';
-            waitingMessage.style.display = 'none';
-
-            const currentPlayer = participants[gameState.currentParticipantIndex];
-            if (currentPlayer) {
-                turnTitle.textContent = `Turno de: ${currentPlayer.name}`;
-            } else {
-                turnTitle.textContent = 'Esperando jugador...';
-            }
-
-
-            updatePlayerStats(participants, gameState);
-            drawRoulette(gameState.rouletteCategories, gameState.colors, gameState.spinAngle || 0);
+            createRoulette(gameState.rouletteCategories, gameState.colors, gameState.spinAngle || 0);
         }
 
+        // fallbackBtn.addEventListener('click', () => {
+        //     canvas.style.display = 'none';
+        //     fallbackRoulette.style.display = 'flex';
+        //     fallbackBtn.style.display = 'none';
+        // });
 
-
-        fallbackBtn.addEventListener('click', () => {
-            canvas.style.display = 'none';
-            fallbackRoulette.style.display = 'flex';
-            fallbackBtn.style.display = 'none';
-        });
-
-        function drawRoulette(categories, colors, angle) {
-            const numSegments = categories.length;
-            const anglePerSegment = 360 / numSegments;
-            const radius = Math.min(canvas.width, canvas.height) / 2;
-            const centerX = canvas.width / 2;
-            const centerY = canvas.height / 2;
-
+        function createRoulette(categories, colors, angle = 0) {
             if (!categories || categories.length === 0) {
-                ctx.clearRect(0, 0, canvas.width, canvas.height); // Limpia el canvas si no hay categorías
+                rouletteImage.style.display = 'none';
                 return;
             }
+            rouletteImage.style.display = 'block';
 
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const chartConfig = {
+                type: 'doughnut',
+                data: {
+                    labels: categories,
+                    datasets: [{ data: categories.map(() => 1), backgroundColor: colors }]
+                },
+                options: { plugins: { legend: { display: false }, datalabels: { color: '#fff', font: { weight: 'bold', size: 16 } } } }
+            };
 
-            for (let i = 0; i < numSegments; i++) {
-                ctx.beginPath();
-                ctx.moveTo(centerX, centerY);
-                ctx.arc(centerX, centerY, radius, (i * anglePerSegment + angle - 90) * Math.PI / 180, ((i + 1) * anglePerSegment + angle - 90) * Math.PI / 180);
-                ctx.closePath();
-                ctx.fillStyle = colors[i % colors.length];
-                ctx.fill();
+            const encodedConfig = encodeURIComponent(JSON.stringify(chartConfig));
+            rouletteImage.src = `https://quickchart.io/chart?c=${encodedConfig}&width=300&height=300&backgroundColor=rgba(0,0,0,0)`;
 
-                ctx.save();
-                ctx.translate(centerX, centerY);
-                ctx.rotate(((i + 0.5) * anglePerSegment + angle) * Math.PI / 180);
-                ctx.fillStyle = '#000';
-                ctx.font = 'bold 20px sans-serif';
-                ctx.textAlign = 'center';
-                ctx.fillText(categories[i], radius * 0.7, 0);
-                ctx.restore();
-            }
-
-            if (angle !== 0) {
-                 // Lógica para la animación
-                canvas.style.transition = 'transform 6.2s cubic-bezier(0.25, 0.1, 0.25, 1)';
-                canvas.style.transform = `rotate(${angle}deg)`;
-
-            }
-
-
+            // Aplicar la rotación para el giro
+            rouletteImage.style.transition = 'none';
+            rouletteImage.offsetHeight; // Forzar reflow
+            rouletteImage.style.transition = 'transform 6.2s cubic-bezier(0.25, 0.1, 0.25, 1)';
+            rouletteImage.style.transform = `rotate(${angle}deg)`;
         }
 
         function displayPodium(participants) {
@@ -297,8 +269,6 @@
                 statsTbody.appendChild(row);
             });
         }
-        
-
         
         setInterval(fetchAndUpdate, 1700);
         fetchAndUpdate();

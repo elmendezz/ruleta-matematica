@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ruleta Cósmica</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@400;700;900&display=swap');
 
@@ -118,9 +117,8 @@
                 <section id="roulette-section" style="display: flex; flex-direction: column; align-items: center;">
                     <h2 id="topic-title"></h2>
                     <div id="roulette-container" style="position: relative; max-width: 500px; margin: auto;">
-                        <div id="arrow" style="border-left: 25px solid transparent; border-right: 25px solid transparent; border-top: 50px solid var(--primary-accent); z-index: 10; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -100%); filter: drop-shadow(0 -3px 5px var(--primary-accent));"></div>
-                        <canvas id="roulette-wheel" width="500" height="500" style="position: absolute; left: 0; top: 0;"></canvas>
-                        <div id="fallback-roulette"></div>
+                        <div id="arrow"></div>
+                        <img id="roulette-wheel" width="500" height="500" alt="Ruleta del juego">
                     </div>
                     <h3 id="current-participant-display"></h3>
                     <div id="question-display"></div>
@@ -139,11 +137,9 @@
         const questionDisplay = document.getElementById('question-display');
         const topicTitle = document.getElementById('topic-title');
         const participantDisplay = document.getElementById('current-participant-display');
-        const canvas = document.getElementById('roulette-wheel');
-        const ctx = canvas.getContext('2d');
+        const rouletteImage = document.getElementById('roulette-wheel');
         const resultDisplay = document.getElementById('result-display');
         
-        let rouletteChart = null;
         let lastKnownState = {};
 
         // --- Lógica para la simulación secreta ---
@@ -175,6 +171,7 @@
 
             if (JSON.stringify(data) === JSON.stringify(lastKnownState)) return;
             lastKnownState = data;
+            const { participants, gameState } = data;
 
 
             if (gameState.status !== 'running' && gameState.status !== 'finished') {
@@ -199,7 +196,7 @@
             updateParticipantsList(participants, gameState.currentParticipantIndex);
 
             if (gameState.rouletteCategories && gameState.colors) {
-                drawRoulette(gameState.rouletteCategories, gameState.colors, gameState.spinAngle || 0);
+                createRoulette(gameState.rouletteCategories, gameState.colors, gameState.spinAngle || 0);
             }
         }
 
@@ -245,40 +242,30 @@
             });
         }
 
-        function drawRoulette(categories, colors, angle) {
-            const numSegments = categories.length;
-            const anglePerSegment = 360 / numSegments;
-            const radius = Math.min(canvas.width, canvas.height) / 2;
-            const centerX = canvas.width / 2;
-            const centerY = canvas.height / 2;
-
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            for (let i = 0; i < numSegments; i++) {
-                ctx.beginPath();
-                ctx.moveTo(centerX, centerY);
-                ctx.arc(centerX, centerY, radius, (i * anglePerSegment + angle - 90) * Math.PI / 180, ((i + 1) * anglePerSegment + angle - 90) * Math.PI / 180);
-                ctx.closePath();
-                ctx.fillStyle = colors[i % colors.length];
-                ctx.fill();
-
-                ctx.save();
-                ctx.translate(centerX, centerY);
-                ctx.rotate(((i + 0.5) * anglePerSegment + angle) * Math.PI / 180);
-                ctx.fillStyle = '#fff';
-                ctx.font = 'bold 20px sans-serif';
-                ctx.textAlign = 'center';
-                ctx.fillText(categories[i], radius * 0.7, 0);
-                ctx.restore();
+        function createRoulette(categories, colors, angle = 0) {
+            if (!categories || categories.length === 0) {
+                rouletteImage.style.display = 'none';
+                return;
             }
+            rouletteImage.style.display = 'block';
 
-            if (angle !== 0) {
-                 // Lógica para la animación
-                canvas.style.transition = 'transform 6.2s cubic-bezier(0.25, 0.1, 0.25, 1)';
-                canvas.style.transform = `rotate(${angle}deg)`;
+            const chartConfig = {
+                type: 'doughnut',
+                data: {
+                    labels: categories,
+                    datasets: [{ data: categories.map(() => 1), backgroundColor: colors }]
+                },
+                options: { plugins: { legend: { display: false }, datalabels: { color: '#fff', font: { weight: 'bold', size: 20 } } } }
+            };
 
-            }
+            const encodedConfig = encodeURIComponent(JSON.stringify(chartConfig));
+            rouletteImage.src = `https://quickchart.io/chart?c=${encodedConfig}&width=500&height=500&backgroundColor=rgba(0,0,0,0)`;
 
+            // Aplicar la rotación para el giro
+            rouletteImage.style.transition = 'none';
+            rouletteImage.offsetHeight; // Forzar reflow
+            rouletteImage.style.transition = 'transform 6.2s cubic-bezier(0.25, 0.1, 0.25, 1)';
+            rouletteImage.style.transform = `rotate(${angle}deg)`;
         }
         
 

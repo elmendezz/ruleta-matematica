@@ -152,7 +152,7 @@
             <h2 id="current-player-teacher"></h2>
             <div id="roulette-container" style="position: relative; max-width: 300px; margin: 20px auto;">
                 <div id="arrow" style="border-left: 20px solid transparent; border-right: 20px solid transparent; border-top: 40px solid var(--primary-accent); z-index: 10; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -100%); filter: drop-shadow(0 -3px 5px var(--primary-accent));"></div>
-                <canvas id="roulette-wheel" width="300" height="300"></canvas>
+                <img id="roulette-wheel" width="300" height="300" alt="Ruleta del juego">
             </div>
             <button id="spin-btn">Girar Ruleta</button>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
@@ -184,8 +184,7 @@
         const manualEntriesInput = document.getElementById('manual-entries-input');
         const failuresInput = document.getElementById('failures-input');
         const fetchCategoriesBtn = document.getElementById('fetch-categories-btn');
-        const canvas = document.getElementById('roulette-wheel');
-        const ctx = canvas.getContext('2d');
+        const rouletteImage = document.getElementById('roulette-wheel');
 
         let localState = { participants: [], gameState: { status: 'waiting' } };
         let oldState = {};
@@ -438,9 +437,10 @@
                 incorrectBtn.disabled = localState.gameState.isSpinning || !isPlayerActionable;
 
                 // Lógica para dibujar y girar la ruleta
-                drawRoulette(localState.gameState.rouletteCategories, localState.gameState.colors);
-                if (localState.gameState.isSpinning && oldState?.gameState?.isSpinning === false) spinTheWheel(localState.gameState);
-
+                createRoulette(localState.gameState.rouletteCategories, localState.gameState.colors);
+                if (localState.gameState.isSpinning && oldState?.gameState?.isSpinning === false) {
+                    spinTheWheel(localState.gameState);
+                }
             } else {
                 setupSection.style.display = 'block';
                 gameSection.style.display = 'none';
@@ -449,44 +449,12 @@
             oldState = JSON.parse(JSON.stringify(localState));
         }
 
-        function drawRoulette(categories, colors, angle = 0) {
-            if (!categories || categories.length === 0) {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                return;
-            }
-            const numSegments = categories.length;
-            const anglePerSegment = 360 / numSegments;
-            const radius = Math.min(canvas.width, canvas.height) / 2;
-            const centerX = canvas.width / 2;
-            const centerY = canvas.height / 2;
-
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            for (let i = 0; i < numSegments; i++) {
-                ctx.beginPath();
-                ctx.moveTo(centerX, centerY);
-                ctx.arc(centerX, centerY, radius, (i * anglePerSegment + angle - 90) * Math.PI / 180, ((i + 1) * anglePerSegment + angle - 90) * Math.PI / 180);
-                ctx.closePath();
-                ctx.fillStyle = colors[i % colors.length];
-                ctx.fill();
-
-                ctx.save();
-                ctx.translate(centerX, centerY);
-                ctx.rotate(((i + 0.5) * anglePerSegment + angle) * Math.PI / 180);
-                ctx.fillStyle = '#fff';
-                ctx.font = 'bold 16px sans-serif';
-                ctx.textAlign = 'center';
-                ctx.fillText(categories[i], radius * 0.7, 5);
-                ctx.restore();
-            }
-        }
-
         function spinTheWheel(gameState) {
-            canvas.style.transition = 'transform 6.2s cubic-bezier(0.25, 0.1, 0.25, 1)';
-            canvas.style.transform = `rotate(${gameState.spinAngle}deg)`;
+            rouletteImage.style.transition = 'transform 6.2s cubic-bezier(0.25, 0.1, 0.25, 1)';
+            rouletteImage.style.transform = `rotate(${gameState.spinAngle}deg)`;
 
             // El admin es el único que calcula el resultado y pide la pregunta
-            canvas.addEventListener('transitionend', () => {
+            rouletteImage.addEventListener('transitionend', () => {
                 const finalRotation = gameState.spinAngle % 360;
                 const sliceAngle = 360 / gameState.rouletteCategories.length;
                 const selectedIndex = Math.floor((360 - finalRotation + 90) % 360 / sliceAngle);
@@ -500,6 +468,28 @@
                 newState.gameState.isSpinning = false; // Asegura que los botones se reactiven
                 updateGameState(newState);
             }, { once: true });
+        }
+
+        function createRoulette(categories, colors) {
+            if (!categories || categories.length === 0) {
+                rouletteImage.style.display = 'none';
+                return;
+            }
+            rouletteImage.style.display = 'block';
+            rouletteImage.style.transition = 'none';
+            rouletteImage.style.transform = 'rotate(0deg)';
+
+            const chartConfig = {
+                type: 'doughnut',
+                data: {
+                    labels: categories,
+                    datasets: [{ data: categories.map(() => 1), backgroundColor: colors }]
+                },
+                options: { plugins: { legend: { display: false }, datalabels: { color: '#fff', font: { weight: 'bold', size: 16 } } } }
+            };
+
+            const encodedConfig = encodeURIComponent(JSON.stringify(chartConfig));
+            rouletteImage.src = `https://quickchart.io/chart?c=${encodedConfig}&width=300&height=300&backgroundColor=rgba(0,0,0,0)`;
         }
 
         const startFetching = (initialLoad = true) => {
