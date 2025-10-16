@@ -250,24 +250,24 @@
             } catch (error) { console.error("Error al cargar estado.", error); }
         }
 
-        addBtn.addEventListener('click', () => {
+        addBtn.addEventListener('click', async () => {
             const name = participantInput.value.trim();
             if (name) {
-                localState.participants.push({ name, score: 0, failures: 0, isEliminated: false });
-                // Guarda en cookie y actualiza UI
-                setCookie('participants', localState.participants, 1);
-                renderUI();
+                const newParticipants = [...localState.participants, { name, score: 0, failures: 0, isEliminated: false }];
+                await updateGameState({
+                    ...localState,
+                    action: 'updateParticipants',
+                    participants: newParticipants
+                });
                 participantInput.value = '';
             }
         });
 
-        list.addEventListener('click', (e) => {
+        list.addEventListener('click', async (e) => {
             if (e.target.classList.contains('remove-participant-btn')) {
                 const indexToRemove = parseInt(e.target.dataset.index, 10);
-                localState.participants.splice(indexToRemove, 1);
-                // Guarda en cookie y actualiza UI
-                setCookie('participants', localState.participants, 1);
-                renderUI();
+                const newParticipants = localState.participants.filter((_, index) => index !== indexToRemove);
+                await updateGameState({ ...localState, action: 'updateParticipants', participants: newParticipants });
             }
         });
 
@@ -329,7 +329,6 @@
                     currentQuestion: 'Gira la ruleta', lastResult: null
                 }
             };
-            eraseCookie('participants'); // Limpia la cookie al iniciar el juego
             updateGameState(newState);
         });
 
@@ -400,7 +399,6 @@
         resetBtn.addEventListener('click', () => {
             if (confirm('¿Seguro que quieres reiniciar todo el juego? Se perderán los participantes y la configuración.')) {
                 updateGameState({ action: 'reset', participants: [], gameState: { status: 'waiting', lastResult: null } });
-                eraseCookie('participants'); // Borra la cookie de participantes
             }
         });
 
@@ -483,13 +481,6 @@
 
         const startFetching = (initialLoad = true) => {
             // Carga inicial de participantes desde la cookie si el juego no ha empezado
-            if (localState.gameState.status === 'waiting') {
-                const cookieParticipants = getCookie('participants');
-                if (cookieParticipants) {
-                    localState.participants = cookieParticipants;
-                    renderUI();
-                }
-            }
             if (initialLoad) {
                 fetchGameState(); // Carga inicial solo la primera vez
             }
